@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DivineMantra 3D Universe | Cosmic GLB Models Collection</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+</head>
+<body>
+    <!-- Cosmic Background -->
+    <div class="cosmic-bg">
+        <div class="stars"></div>
+        <div class="stars2"></div>
+        <div class="stars3"></div>
+        <div class="galaxy"></div>
+        <div class="nebula"></div>
+        <div class="pulsars"></div>
+    </div>
+
+    <!-- Divine Particles -->
+    <div class="divine-particles">
+        <canvas id="divineCanvas"></canvas>
+    </div>
+
+    <!-- Floating Sanskrit Mantras -->
+    <div class="mantra-floats">
+        <div class="mantra">ॐ</div>
+        <div class="mantra">𝌆</div>
+        <div class="mantra">☯</div>
+        <div class="mantra">𓀀</div>
+        <div class="mantra">꧁</div>
+    </div>
+
+    <!-- Main Website -->
+    <div id="mainWebsite">
+        <!-- Divine Header -->
+        <header class="header divine-header">
+            <div class="cosmic-orb"></div>
+            <div class="header-aura"></div>
+            <div class="container">
+                <div class="logo">
+                    <div class="logo-orb animate__animated animate__pulse">
+                        <i class="fas fa-infinity"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1 class="divine-title">DivineMantra</h1>
+                        <h2 class="cosmic-subtitle">3D Universe</h2>
+                        <div class="title-glow"></div>
+                    </div>
+                </div>
+                
+                <!-- APK Download -->
+                <a href="https://www.mediafire.com/file/fdfnc5kg8wwq52d/app-debug.apk/file" target="_blank" class="cosmic-apk mobile-hidden">
+                    <span class="apk-icon">
+                        <i class="fas fa-rocket"></i>
+                    </span>
+                    <span class="apk-text">
+                        <span class="apk-title">Cosmic App</span>
+                        <span class="apk-sub">Download APK</span>
+                    </span>
+                    <span class="apk-glow"></span>
+                </a>
+
+                <nav class="nav">
+                    <button id="adminAccessBtn" class="divine-button cosmic-btn nav-btn">
+                        <span class="btn-aura"></span>
+                        <i class="fas fa-crown"></i>
+                        Divine Access
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Admin Login Modal -->
+        <div id="adminLoginModal" class="modal cosmic-modal" style="display: none;">
+            <div class="modal-content divine-card">
+                <div class="modal-header">
+                    <div class="modal-glow"></div>
+                    <h2><i class="fas fa-crown"></i> Divine Access Portal</h2>
+                    <span class="close-modal divine-close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="divine-input-group">
+                        <div class="input-icon">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <input type="password" id="adminPassword" placeholder="Enter Cosmic Passcode" class="divine-input">
+                        <div class="input-glow"></div>
+                    </div>
+                    <button id="loginBtn" class="divine-button cosmic-btn">
+                        <span class="btn-aura"></span>
+                        <span class="btn-sparkles">
+                            <i class="fas fa-sparkles"></i>
+                            <i class="fas fa-sparkles"></i>
+                            <i class="fas fa-sparkles"></i>
+                        </span>
+                        <span class="btn-text">Access Divine Portal</span>
+                    </button>
+                    <p id="loginError" class="error-message"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cosmic Hero -->
+        <section class="hero cosmic-hero">
+            <div class="hero-portal mobile-hidden">
+                <div class="portal-ring"></div>
+                <div class="portal-core"></div>
+                <div class="portal-energy"></div>
+            </div>
+            <div class="hero-constellation"></div>
+            <div class="container">
+                <div class="hero-content animate__animated animate__fadeInUp">
+                    <div class="hero-badge cosmic-badge">
+                        <i class="fas fa-star"></i>
+                        <span>COSMIC EDITION</span>
+                    </div>
+                    <h1 class="hero-title divine-glow">
+                        <span class="title-line">Where Divinity</span>
+                        <span class="title-line">Meets Digital</span>
+                        <span class="title-line">Cosmos</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        Immerse in our celestial collection of sacred 3D models. 
+                        Each GLB is blessed with cosmic energy and divine protection.
+                    </p>
+                    <div class="hero-features">
+                        <div class="feature">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Cosmic Security</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-bolt"></i>
+                            <span>Instant Download</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-infinity"></i>
+                            <span>Unlimited Access</span>
+                        </div>
+                    </div>
+                    <div class="hero-actions">
+                        <button class="divine-button cosmic-btn explore-btn">
+                            <span class="btn-aura"></span>
+                            <span class="btn-sparkles">
+                                <i class="fas fa-sparkles"></i>
+                            </span>
+                            Explore Cosmos
+                        </button>
+                        <a href="https://www.mediafire.com/file/fdfnc5kg8wwq52d/app-debug.apk/file" target="_blank" class="divine-button outline-btn mobile-only-btn">
+                            <i class="fas fa-download"></i>
+                            Download APK
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-visual mobile-hidden">
+                    <div class="cosmic-crystal">
+                        <div class="crystal-face"></div>
+                        <div class="crystal-face"></div>
+                        <div class="crystal-face"></div>
+                        <div class="crystal-face"></div>
+                        <div class="crystal-core"></div>
+                        <div class="crystal-aura"></div>
+                    </div>
+                    <div class="floating-models">
+                        <div class="model-orb" style="--delay: 0s">
+                            <i class="fas fa-om"></i>
+                        </div>
+                        <div class="model-orb" style="--delay: 1s">
+                            <i class="fas fa-yin-yang"></i>
+                        </div>
+                        <div class="model-orb" style="--delay: 2s">
+                            <i class="fas fa-eye-of-horus"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divine Models Gallery -->
+        <section class="models-section cosmic-section">
+            <div class="section-portal"></div>
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-ornament">
+                        <div class="ornament-line"></div>
+                        <div class="ornament-star">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="ornament-line"></div>
+                    </div>
+                    <h2 class="section-title divine-glow">
+                        <span>Cosmic</span>
+                        <span class="highlight">Collection</span>
+                    </h2>
+                    <p class="section-subtitle">Browse our celestial library of divine 3D models</p>
+                </div>
+                
+                <div id="modelsGrid" class="cosmic-grid premium-grid">
+                    <!-- Models will be loaded here -->
+                </div>
+                
+                <div id="emptyState" class="cosmic-empty">
+                    <div class="empty-orb">
+                        <i class="fas fa-universal-access"></i>
+                    </div>
+                    <h3>The Cosmos Awaits</h3>
+                    <p>No divine models have been manifested yet</p>
+                    <button class="divine-button outline-btn">
+                        <i class="fas fa-plus"></i>
+                        Request Manifestation
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divine Stats -->
+        <section class="stats-section cosmic-section">
+            <div class="container">
+                <div class="stats-grid">
+                    <div class="stat-card divine-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-cube"></i>
+                            <div class="icon-glow"></div>
+                        </div>
+                        <div class="stat-value cosmic-count" data-count="999">0</div>
+                        <div class="stat-label">Divine Models</div>
+                    </div>
+                    <div class="stat-card divine-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-download"></i>
+                            <div class="icon-glow"></div>
+                        </div>
+                        <div class="stat-value cosmic-count" data-count="590000">0</div>
+                        <div class="stat-label">Cosmic Downloads</div>
+                    </div>
+                    <div class="stat-card divine-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-shield-alt"></i>
+                            <div class="icon-glow"></div>
+                        </div>
+                        <div class="stat-value cosmic-count" data-count="100">100</div>
+                        <div class="stat-label">Divine Protection</div>
+                    </div>
+                    <div class="stat-card divine-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-globe"></i>
+                            <div class="icon-glow"></div>
+                        </div>
+                        <div class="stat-value cosmic-count" data-count="1">0</div>
+                        <div class="stat-label">Cosmic Countries</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divine Footer -->
+        <footer class="footer divine-footer">
+            <div class="footer-portal"></div>
+            <div class="footer-constellation"></div>
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-brand">
+                        <div class="footer-logo">
+                            <i class="fas fa-infinity"></i>
+                        </div>
+                        <div class="footer-text">
+                            <h3>DivineMantra Cosmos</h3>
+                            <p>Where spirituality meets digital divinity</p>
+                        </div>
+                    </div>
+                    
+                    <div class="footer-links">
+                        <div class="link-group">
+                            <h4>Cosmic Realms</h4>
+                            <a href="#"><i class="fas fa-chevron-right"></i> Divine Models</a>
+                            <a href="#"><i class="fas fa-chevron-right"></i> Sacred Collection</a>
+                            <a href="#"><i class="fas fa-chevron-right"></i> Cosmic Library</a>
+                        </div>
+                        <div class="link-group">
+                            <h4>Divine Support</h4>
+                            <a href="#"><i class="fas fa-chevron-right"></i> Celestial Help</a>
+                            <a href="#"><i class="fas fa-chevron-right"></i> Contact Oracles</a>
+                            <a href="#"><i class="fas fa-chevron-right"></i> Cosmic FAQ</a>
+                        </div>
+                    </div>
+                    
+                    <div class="footer-social">
+                        <div class="social-title">Join the Cosmos</div>
+                        <div class="social-links">
+                            <a href="#" class="social-icon">
+                                <i class="fab fa-discord"></i>
+                                <div class="icon-glow"></div>
+                            </a>
+                            <a href="#" class="social-icon">
+                                <i class="fab fa-telegram"></i>
+                                <div class="icon-glow"></div>
+                            </a>
+                            <a href="#" class="social-icon">
+                                <i class="fab fa-github"></i>
+                                <div class="icon-glow"></div>
+                            </a>
+                            <a href="#" class="social-icon">
+                                <i class="fab fa-youtube"></i>
+                                <div class="icon-glow"></div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-bottom">
+                    <div class="copyright">
+                        <i class="fas fa-copyright"></i> 2024 DivineMantra Cosmos. All cosmic rights reserved.
+                    </div>
+                    <div class="footer-mantra">
+                        <span class="mantra-text">ॐ नमः शिवाय</span>
+                        <div class="mantra-glow"></div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="admin-panel cosmic-admin" style="display: none;">
+        <div class="admin-header divine-header">
+            <div class="admin-logo">
+                <div class="logo-orb">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <h2>Cosmic Administration Portal</h2>
+                <div class="admin-aura"></div>
+            </div>
+            <button id="logoutBtn" class="divine-button cosmic-btn">
+                <span class="btn-aura"></span>
+                <i class="fas fa-sign-out-alt"></i>
+                Return to Website
+            </button>
+        </div>
+        <div class="admin-content">
+            <div class="admin-portals">
+                <div class="portal-card active" data-portal="upload">
+                    <div class="portal-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3>Upload Portal</h3>
+                    <div class="portal-glow"></div>
+                </div>
+                <div class="portal-card" data-portal="url">
+                    <div class="portal-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3>Cosmic URL</h3>
+                    <div class="portal-glow"></div>
+                </div>
+                <div class="portal-card" data-portal="manage">
+                    <div class="portal-icon">
+                        <i class="fas fa-universe"></i>
+                    </div>
+                    <h3>Model Management</h3>
+                    <div class="portal-glow"></div>
+                </div>
+            </div>
+
+            <!-- Upload Status -->
+            <div class="upload-status divine-card" style="display: none;">
+                <div class="status-header">
+                    <h3><i class="fas fa-sync-alt fa-spin"></i> Cosmic Upload</h3>
+                </div>
+                <div class="status-body">
+                    <div class="cosmic-progress">
+                        <div class="progress-track">
+                            <div class="progress-fill"></div>
+                            <div class="progress-stars"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span class="status-text">Initializing cosmic transfer...</span>
+                            <span class="status-percent">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="uploadPortal" class="portal-content active">
+                <div class="divine-card upload-portal">
+                    <div class="portal-header">
+                        <h3><i class="fas fa-cloud-upload-alt"></i> Upload Divine Model</h3>
+                        <div class="header-glow"></div>
+                    </div>
+                    <div class="portal-body">
+                        <div class="cosmic-form">
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-cube"></i> Model Name
+                                </label>
+                                <input type="text" id="modelName" placeholder="Enter divine model name" class="divine-input">
+                                <div class="input-glow"></div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-image"></i> Thumbnail Image
+                                </label>
+                                <div class="file-upload cosmic-upload">
+                                    <input type="file" id="modelThumbnail" accept="image/*">
+                                    <div class="upload-area">
+                                        <i class="fas fa-cloud-upload"></i>
+                                        <span>Drop or select thumbnail</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-file-code"></i> GLB Model File
+                                </label>
+                                <div class="file-upload cosmic-upload">
+                                    <input type="file" id="modelFile" accept=".glb">
+                                    <div class="upload-area">
+                                        <i class="fas fa-file-archive"></i>
+                                        <span>Drop or select GLB file</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="uploadBtn" class="divine-button cosmic-btn">
+                                <span class="btn-aura"></span>
+                                <i class="fas fa-upload"></i>
+                                Upload to Cosmos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="urlPortal" class="portal-content">
+                <div class="divine-card url-portal">
+                    <div class="portal-header">
+                        <h3><i class="fas fa-globe"></i> Add Cosmic URL</h3>
+                        <div class="header-glow"></div>
+                    </div>
+                    <div class="portal-body">
+                        <div class="cosmic-form">
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-cube"></i> Divine Model Name
+                                </label>
+                                <input type="text" id="urlModelName" placeholder="Enter cosmic model name" class="divine-input">
+                                <div class="input-glow"></div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-link"></i> GLB Cosmic URL
+                                </label>
+                                <input type="url" id="glbUrl" placeholder="https://cosmic.server/model.glb" class="divine-input">
+                                <div class="input-glow"></div>
+                                <div class="input-hint">
+                                    <i class="fas fa-info-circle"></i> Must be public .glb URL
+                                </div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-image"></i> Thumbnail URL (Optional)
+                                </label>
+                                <input type="url" id="thumbnailUrl" placeholder="https://cosmic.server/thumbnail.jpg" class="divine-input">
+                                <div class="input-glow"></div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-tags"></i> Cosmic Tags
+                                </label>
+                                <input type="text" id="modelTags" placeholder="divine, cosmic, sacred (comma separated)" class="divine-input">
+                                <div class="input-glow"></div>
+                            </div>
+                            <button id="addUrlBtn" class="divine-button cosmic-btn">
+                                <span class="btn-aura"></span>
+                                <i class="fas fa-plus-circle"></i>
+                                Add to Cosmic Library
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models Management -->
+            <div id="managePortal" class="portal-content">
+                <div class="divine-card">
+                    <div class="portal-header">
+                        <h3><i class="fas fa-universe"></i> Cosmic Models Library</h3>
+                        <div class="header-glow"></div>
+                    </div>
+                    <div class="portal-body">
+                        <div id="adminModelsGrid" class="cosmic-grid admin-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cosmic Notifications -->
+    <div id="notificationContainer" class="cosmic-notifications"></div>
+
+    <!-- Divine Script -->
+    <script src="script.js"></script>
+</body>
+</html>
