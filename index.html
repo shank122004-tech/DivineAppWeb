@@ -357,6 +357,13 @@
                     <h3>Cosmic URL</h3>
                     <div class="portal-glow"></div>
                 </div>
+                <div class="portal-card" data-portal="cloudflare">
+                    <div class="portal-icon">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <h3>Cloudflare Sync</h3>
+                    <div class="portal-glow"></div>
+                </div>
                 <div class="portal-card" data-portal="manage">
                     <div class="portal-icon">
                         <i class="fas fa-universe"></i>
@@ -478,6 +485,84 @@
                                 <i class="fas fa-plus-circle"></i>
                                 Add to Cosmic Library
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NEW: Cloudflare Sync Portal -->
+            <div id="cloudflarePortal" class="portal-content">
+                <div class="divine-card cloudflare-portal">
+                    <div class="portal-header">
+                        <h3><i class="fas fa-cloud"></i> Cloudflare Dynamic Sync</h3>
+                        <div class="header-glow"></div>
+                        <div class="portal-subtitle">
+                            <i class="fas fa-info-circle"></i> Add models via Cloudflare R2 URLs
+                        </div>
+                    </div>
+                    <div class="portal-body">
+                        <div class="cosmic-form">
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-cube"></i> Divine Model Name
+                                </label>
+                                <input type="text" id="cfModelName" placeholder="Enter cosmic model name" class="divine-input">
+                                <div class="input-glow"></div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-link"></i> Cloudflare R2 GLB URL
+                                </label>
+                                <input type="url" id="cfGlbUrl" placeholder="https://pub-xxxxxxxx.r2.cloudflarestorage.com/..." class="divine-input">
+                                <div class="input-glow"></div>
+                                <div class="input-hint">
+                                    <i class="fas fa-cloud"></i> Must be public R2 .glb URL
+                                </div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-image"></i> Thumbnail URL (Optional)
+                                </label>
+                                <input type="url" id="cfThumbnailUrl" placeholder="https://images.unsplash.com/..." class="divine-input">
+                                <div class="input-glow"></div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-tags"></i> Cosmic Tags
+                                </label>
+                                <input type="text" id="cfModelTags" placeholder="divine, cosmic, sacred (comma separated)" class="divine-input">
+                                <div class="input-glow"></div>
+                            </div>
+                            <div class="form-group divine-input-group">
+                                <label class="form-label">
+                                    <i class="fas fa-globe"></i> Sync to All Users
+                                </label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="syncToAll" checked>
+                                    <label for="syncToAll">Instantly share with all users via Cloudflare</label>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button id="addCloudflareBtn" class="divine-button cosmic-btn">
+                                    <span class="btn-aura"></span>
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    Sync to Cloudflare
+                                </button>
+                                <button id="refreshCloudflareBtn" class="divine-button outline-btn">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Refresh Cloud Data
+                                </button>
+                            </div>
+                            <div class="cloudflare-status" id="cloudflareStatus">
+                                <div class="status-item">
+                                    <i class="fas fa-database"></i>
+                                    <span>Models in Cloud: <span id="cloudModelCount">0</span></span>
+                                </div>
+                                <div class="status-item">
+                                    <i class="fas fa-users"></i>
+                                    <span>Sync Active: <span class="status-online">Online</span></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
