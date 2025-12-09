@@ -534,6 +534,7 @@ async function handleCosmicUpload() {
     }
 }
 
+
 async function handleAddByURL() {
     const name = elements.urlModelName.value.trim();
     const glbUrl = elements.glbUrl.value.trim();
