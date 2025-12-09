@@ -469,7 +469,7 @@ function resetCloudflareForm() {
 }
 
 // ==============================
-// UPLOAD HANDLERS
+// UPLOAD HANDLERS - MODIFIED TO SYNC TO ALL USERS
 // ==============================
 
 async function handleCosmicUpload() {
@@ -515,17 +515,59 @@ async function handleCosmicUpload() {
             securitySignature: COSMIC_CONFIG.SECURITY_SIGNATURE
         };
         
-        await saveCosmicModel(model);
+        // First save locally
+        const localId = await saveCosmicModel(model);
         
-        updateCosmicProgress(100, 'Cosmic upload complete!');
+        // Now sync to Cloudflare for all users
+        updateCosmicProgress(90, 'Syncing to all users...');
         
-        setTimeout(() => {
-            resetUploadForm();
-            showUploadStatus(false);
-            fetchAndRenderAllModels();
-            loadAdminModels();
-            showCosmicNotification('Model uploaded to cosmos!', 'success');
-        }, 1000);
+        // Convert file to base64 for Cloudflare storage
+        const reader = new FileReader();
+        reader.readAsDataURL(glbFile);
+        
+        reader.onload = async () => {
+            try {
+                const cloudflareModel = {
+                    name: model.name,
+                    glbData: reader.result.split(',')[1], // Remove data URL prefix
+                    thumbnail: model.thumbnail,
+                    fileName: model.fileName,
+                    type: 'upload',
+                    source: 'cloudflare',
+                    uploadDate: model.uploadDate,
+                    tags: model.tags,
+                    fileSize: model.fileSize,
+                    securitySignature: COSMIC_CONFIG.SECURITY_SIGNATURE
+                };
+                
+                // Upload to Cloudflare
+                const cloudflareId = await uploadToCloudflare(cloudflareModel);
+                
+                // Update local model with cloudflareId
+                await updateCosmicModel(localId, { cloudflareId });
+                
+                updateCosmicProgress(100, 'Cosmic sync complete!');
+                
+                setTimeout(() => {
+                    resetUploadForm();
+                    showUploadStatus(false);
+                    fetchAndRenderAllModels();
+                    loadAdminModels();
+                    showCosmicNotification('Model uploaded and shared with all users!', 'success');
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Cloudflare sync failed:', error);
+                updateCosmicProgress(100, 'Local upload complete');
+                setTimeout(() => {
+                    resetUploadForm();
+                    showUploadStatus(false);
+                    fetchAndRenderAllModels();
+                    loadAdminModels();
+                    showCosmicNotification('Uploaded locally (Cloudflare sync failed)', 'warning');
+                }, 1000);
+            }
+        };
         
     } catch (error) {
         console.error('Cosmic upload failed:', error);
@@ -533,7 +575,6 @@ async function handleCosmicUpload() {
         showCosmicNotification('Upload failed: ' + error.message, 'error');
     }
 }
-
 
 async function handleAddByURL() {
     const name = elements.urlModelName.value.trim();
@@ -575,16 +616,30 @@ async function handleAddByURL() {
             securitySignature: COSMIC_CONFIG.SECURITY_SIGNATURE
         };
         
-        await saveCosmicModel(model);
+        // Save locally
+        const localId = await saveCosmicModel(model);
         
-        updateCosmicProgress(100, 'Added to cosmic collection!');
+        // Also sync to Cloudflare for all users
+        updateCosmicProgress(90, 'Syncing to all users...');
+        
+        const cloudflareModel = {
+            ...model,
+            source: 'cloudflare'
+        };
+        
+        const cloudflareId = await syncURLToCloudflare(cloudflareModel);
+        
+        // Update local model with cloudflareId
+        await updateCosmicModel(localId, { cloudflareId });
+        
+        updateCosmicProgress(100, 'Added and synced to all users!');
         
         setTimeout(() => {
             showUploadStatus(false);
             resetURLForm();
             fetchAndRenderAllModels();
             loadAdminModels();
-            showCosmicNotification('Cosmic URL added successfully!', 'success');
+            showCosmicNotification('Cosmic URL added and shared with all users!', 'success');
         }, 1000);
         
     } catch (error) {
@@ -629,9 +684,9 @@ async function handleCloudflareAdd() {
         const localId = await saveCosmicModel(model);
         
         if (syncToAll) {
-            updateCosmicProgress(90, 'Syncing to Cloudflare...');
+            updateCosmicProgress(90, 'Syncing to all users...');
             
-            const cloudId = await persistToWorkerAdd(model);
+            const cloudId = await syncURLToCloudflare(model);
             
             model.cloudflareId = cloudId;
             await updateCosmicModel(localId, model);
@@ -662,6 +717,54 @@ async function handleCloudflareAdd() {
 // ==============================
 // CLOUDFLARE FUNCTIONS
 // ==============================
+
+async function uploadToCloudflare(model) {
+    try {
+        const response = await fetch(`${COSMIC_CONFIG.CLOUDFLARE_WORKER_URL}/upload`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': COSMIC_CONFIG.CLOUDFLARE_ADMIN_SECRET
+            },
+            body: JSON.stringify(model)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Worker responded with ${response.status}`);
+        }
+        
+        const result = await response.json();
+        return result.id || Date.now().toString();
+        
+    } catch (error) {
+        console.warn('Cloudflare upload failed:', error);
+        throw error;
+    }
+}
+
+async function syncURLToCloudflare(model) {
+    try {
+        const response = await fetch(`${COSMIC_CONFIG.CLOUDFLARE_WORKER_URL}/sync-url`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': COSMIC_CONFIG.CLOUDFLARE_ADMIN_SECRET
+            },
+            body: JSON.stringify(model)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Worker responded with ${response.status}`);
+        }
+        
+        const result = await response.json();
+        return result.id || Date.now().toString();
+        
+    } catch (error) {
+        console.warn('Cloudflare URL sync failed:', error);
+        throw error;
+    }
+}
 
 function isLikelyGlbUrl(url) {
     const glbExtensions = ['.glb', '.gltf'];
@@ -704,30 +807,6 @@ function buildModelFromInputs(name, glbUrl, thumbnailUrl, tags) {
     };
 }
 
-async function persistToWorkerAdd(model) {
-    try {
-        const response = await fetch(`${COSMIC_CONFIG.CLOUDFLARE_WORKER_URL}/add`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': COSMIC_CONFIG.CLOUDFLARE_ADMIN_SECRET
-            },
-            body: JSON.stringify(model)
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Worker responded with ${response.status}`);
-        }
-        
-        const result = await response.json();
-        return result.id || Date.now().toString();
-        
-    } catch (error) {
-        console.warn('Worker sync failed, continuing locally:', error);
-        return null;
-    }
-}
-
 async function fetchAndRenderAllModels() {
     try {
         const [localModels, cloudflareModels] = await Promise.all([
@@ -751,7 +830,16 @@ async function fetchAndRenderAllModels() {
         
     } catch (error) {
         console.error('Failed to fetch and render models:', error);
-        return [];
+        
+        // Fallback: just show local models
+        const localModels = await getAllCosmicModels();
+        renderCosmicModels(localModels, elements.modelsGrid, false);
+        
+        if (isDivineAdmin && elements.adminModelsGrid) {
+            renderCosmicModels(localModels, elements.adminModelsGrid, true);
+        }
+        
+        return localModels;
     }
 }
 
@@ -929,7 +1017,7 @@ function createCosmicModelCard(model, isAdminView) {
     
     if (isAdminView) {
         const deleteBtn = card.querySelector('.delete-btn');
-        deleteBtn.addEventListener('click', () => deleteCosmicModel(model.id));
+        deleteBtn.addEventListener('click', () => deleteCosmicModel(model.id, model.cloudflareId));
     }
     
     return card;
@@ -939,37 +1027,53 @@ async function downloadCosmicModel(model) {
     try {
         showCosmicNotification('Initiating cosmic download...', 'warning');
         
+        let downloadUrl = null;
+        
         if (model.type === 'url' && model.glbUrl) {
-            if (isMobile) {
-                window.open(model.glbUrl, '_blank');
-            } else {
-                const link = document.createElement('a');
-                link.href = model.glbUrl;
-                link.download = model.fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+            downloadUrl = model.glbUrl;
+        } else if (model.glbData && model.cloudflareId) {
+            // Try to download from Cloudflare first
+            try {
+                const response = await fetch(`${COSMIC_CONFIG.CLOUDFLARE_WORKER_URL}/download/${model.cloudflareId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.glbUrl) {
+                        downloadUrl = data.glbUrl;
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to get Cloudflare download URL:', error);
             }
-            
-        } else if (model.glbData) {
-            const blob = new Blob([model.glbData], { type: 'model/gltf-binary' });
-            const url = URL.createObjectURL(blob);
-            
-            if (isMobile) {
-                window.open(url, '_blank');
-            } else {
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = model.fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-            
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
         
-        showCosmicNotification('Cosmic download initiated!', 'success');
+        if (!downloadUrl && model.glbData) {
+            // Fallback to local download
+            const blob = new Blob([model.glbData], { type: 'model/gltf-binary' });
+            const url = URL.createObjectURL(blob);
+            downloadUrl = url;
+        }
+        
+        if (downloadUrl) {
+            if (isMobile) {
+                window.open(downloadUrl, '_blank');
+            } else {
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = model.fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            // Clean up blob URL if we created one
+            if (downloadUrl.startsWith('blob:')) {
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+            }
+            
+            showCosmicNotification('Cosmic download initiated!', 'success');
+        } else {
+            throw new Error('No download source available');
+        }
         
     } catch (error) {
         console.error('Cosmic download failed:', error);
@@ -977,13 +1081,29 @@ async function downloadCosmicModel(model) {
     }
 }
 
-async function deleteCosmicModel(id) {
+async function deleteCosmicModel(id, cloudflareId = null) {
     if (!confirm('Remove this model from the cosmos?')) {
         return;
     }
     
     try {
+        // Delete from local database
         await deleteModelFromCosmos(id);
+        
+        // Also delete from Cloudflare if it has a cloudflareId
+        if (cloudflareId) {
+            try {
+                await fetch(`${COSMIC_CONFIG.CLOUDFLARE_WORKER_URL}/delete/${cloudflareId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'x-admin-secret': COSMIC_CONFIG.CLOUDFLARE_ADMIN_SECRET
+                    }
+                });
+            } catch (error) {
+                console.warn('Failed to delete from Cloudflare:', error);
+            }
+        }
+        
         await fetchAndRenderAllModels();
         showCosmicNotification('Model removed from cosmos', 'warning');
     } catch (error) {
@@ -1155,6 +1275,27 @@ function initCosmicEffects() {
         
         .model-source-badge i {
             font-size: 0.8rem;
+        }
+        
+        .btn-sparkles {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+        }
+        
+        .divine-button:hover .btn-sparkles {
+            opacity: 1;
+            animation: sparkle 0.6s ease;
+        }
+        
+        @keyframes sparkle {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
         }
     `;
     document.head.appendChild(style);
@@ -1368,13 +1509,15 @@ async function addSampleData() {
     for (const model of sampleModels) {
         try {
             await saveCosmicModel(model);
+            // Also sync to Cloudflare for all users
+            await syncURLToCloudflare(model);
         } catch (error) {
             console.error('Failed to add sample model:', error);
         }
     }
     
     await fetchAndRenderAllModels();
-    showCosmicNotification('Sample cosmic data added', 'success');
+    showCosmicNotification('Sample cosmic data added and shared with all users', 'success');
 }
 
 // Uncomment to add sample data on first load
