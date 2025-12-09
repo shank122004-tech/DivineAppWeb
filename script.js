@@ -1,5 +1,5 @@
 // ==============================
-// DIVINE COSMIC UNIVERSE - Mobile First Edition
+// DIVINE COSMIC UNIVERSE - Complete Edition
 // ==============================
 
 // Cosmic Configuration
@@ -10,81 +10,112 @@ const COSMIC_CONFIG = {
     ADMIN_PASSWORD: "Shashank@122004",
     SECURITY_SIGNATURE: "DM-9937-COSMIC-SECURE",
     
-    // Mobile-specific settings
-    MOBILE_BREAKPOINT: 768,
-    TOUCH_TIMEOUT: 300,
+    // Cloudflare Worker Configuration
+    CLOUDFLARE_WORKER_URL: "https://wispy-leaf-81cb.shank122004.workers.dev",
+    CLOUDFLARE_ADMIN_SECRET: "DivineCosmosSecret2024",
+    MODELS_JSON_URL: "https://wispy-leaf-81cb.shank122004.workers.dev/models.json",
     
-    // Cosmic Effects
+    // Mobile settings
+    MOBILE_BREAKPOINT: 768,
     PARTICLE_COUNT: 100,
-    STARS_COUNT: 80,
-    GLOW_INTENSITY: 0.3
+    
+    // Polling intervals
+    POLL_INTERVAL: 10000,
+    INITIAL_POLL_DELAY: 3000
 };
 
-// Divine State
+// Global State
 let cosmicDB = null;
 let isDivineAdmin = false;
-let divineParticles = [];
-let isMobile = window.innerWidth < COSMIC_CONFIG.MOBILE_BREAKPOINT;
+let isMobile = false;
+let cloudflarePollingInterval = null;
+let cloudflareModels = [];
 
-// DOM Elements
-const elements = {
-    adminLoginModal: document.getElementById('adminLoginModal'),
-    adminPanel: document.getElementById('adminPanel'),
-    mainWebsite: document.getElementById('mainWebsite'),
-    adminAccessBtn: document.getElementById('adminAccessBtn'),
-    closeModal: document.querySelector('.close-modal'),
-    loginBtn: document.getElementById('loginBtn'),
-    logoutBtn: document.getElementById('logoutBtn'),
-    adminPassword: document.getElementById('adminPassword'),
-    loginError: document.getElementById('loginError'),
-    modelsGrid: document.getElementById('modelsGrid'),
-    adminModelsGrid: document.getElementById('adminModelsGrid'),
-    emptyState: document.getElementById('emptyState'),
-    uploadBtn: document.getElementById('uploadBtn'),
-    addUrlBtn: document.getElementById('addUrlBtn'),
-    modelName: document.getElementById('modelName'),
-    urlModelName: document.getElementById('urlModelName'),
-    modelThumbnail: document.getElementById('modelThumbnail'),
-    modelFile: document.getElementById('modelFile'),
-    glbUrl: document.getElementById('glbUrl'),
-    thumbnailUrl: document.getElementById('thumbnailUrl'),
-    modelTags: document.getElementById('modelTags'),
-    uploadStatus: document.querySelector('.upload-status'),
-    progressFill: document.querySelector('.progress-fill'),
-    statusText: document.querySelector('.status-text'),
-    statusPercent: document.querySelector('.status-percent'),
-    portalCards: document.querySelectorAll('.portal-card'),
-    portalContents: document.querySelectorAll('.portal-content'),
-    exploreBtn: document.querySelector('.explore-btn')
-};
+// DOM Elements Cache
+let elements = {};
 
-// Divine Initialization
+// ==============================
+// INITIALIZATION
+// ==============================
+
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Divine Cosmos Initializing...');
+    
     try {
+        // Cache DOM elements
+        cacheElements();
+        
+        // Detect mobile
         detectMobile();
-        setupMobileViewport();
+        
+        // Initialize everything
         await initializeCosmos();
-        setupCosmicEventListeners();
-        initDivineParticles();
+        setupEventListeners();
         initCosmicEffects();
         animateCounters();
         setupScrollAnimations();
         
-        // Show welcome notification
+        // Start Cloudflare polling
+        setTimeout(() => {
+            startCloudflarePolling();
+        }, COSMIC_CONFIG.INITIAL_POLL_DELAY);
+        
+        // Show welcome
         setTimeout(() => {
             showCosmicNotification('Cosmic interface initialized', 'success');
         }, 1000);
+        
     } catch (error) {
         console.error('Cosmic initialization failed:', error);
         showCosmicNotification('Failed to initialize cosmos', 'error');
     }
 });
 
-// Detect Mobile Device
+function cacheElements() {
+    elements = {
+        adminLoginModal: document.getElementById('adminLoginModal'),
+        adminPanel: document.getElementById('adminPanel'),
+        mainWebsite: document.getElementById('mainWebsite'),
+        adminAccessBtn: document.getElementById('adminAccessBtn'),
+        closeModal: document.querySelector('.close-modal'),
+        loginBtn: document.getElementById('loginBtn'),
+        logoutBtn: document.getElementById('logoutBtn'),
+        adminPassword: document.getElementById('adminPassword'),
+        loginError: document.getElementById('loginError'),
+        modelsGrid: document.getElementById('modelsGrid'),
+        adminModelsGrid: document.getElementById('adminModelsGrid'),
+        emptyState: document.getElementById('emptyState'),
+        uploadBtn: document.getElementById('uploadBtn'),
+        addUrlBtn: document.getElementById('addUrlBtn'),
+        addCloudflareBtn: document.getElementById('addCloudflareBtn'),
+        refreshCloudflareBtn: document.getElementById('refreshCloudflareBtn'),
+        modelName: document.getElementById('modelName'),
+        urlModelName: document.getElementById('urlModelName'),
+        cfModelName: document.getElementById('cfModelName'),
+        modelThumbnail: document.getElementById('modelThumbnail'),
+        modelFile: document.getElementById('modelFile'),
+        glbUrl: document.getElementById('glbUrl'),
+        cfGlbUrl: document.getElementById('cfGlbUrl'),
+        thumbnailUrl: document.getElementById('thumbnailUrl'),
+        cfThumbnailUrl: document.getElementById('cfThumbnailUrl'),
+        modelTags: document.getElementById('modelTags'),
+        cfModelTags: document.getElementById('cfModelTags'),
+        syncToAll: document.getElementById('syncToAll'),
+        cloudflareStatus: document.getElementById('cloudflareStatus'),
+        cloudModelCount: document.getElementById('cloudModelCount'),
+        uploadStatus: document.querySelector('.upload-status'),
+        progressFill: document.querySelector('.progress-fill'),
+        statusText: document.querySelector('.status-text'),
+        statusPercent: document.querySelector('.status-percent'),
+        portalCards: document.querySelectorAll('.portal-card'),
+        portalContents: document.querySelectorAll('.portal-content'),
+        exploreBtn: document.querySelector('.explore-btn'),
+        modalCloseBtns: document.querySelectorAll('.divine-close, .close-modal')
+    };
+}
+
 function detectMobile() {
     isMobile = window.innerWidth < COSMIC_CONFIG.MOBILE_BREAKPOINT;
-    
-    // Add mobile class to body
     if (isMobile) {
         document.body.classList.add('mobile-device');
     } else {
@@ -92,22 +123,15 @@ function detectMobile() {
     }
 }
 
-// Setup Mobile Viewport
-function setupMobileViewport() {
-    // Prevent zoom on iOS
-    let viewport = document.querySelector('meta[name="viewport"]');
-    if (isMobile && viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-    }
-}
-
-// Initialize Cosmic Universe
 async function initializeCosmos() {
     await initCosmicDB();
-    await loadCosmicModels();
+    await fetchAndRenderAllModels();
 }
 
-// Initialize Cosmic Database
+// ==============================
+// DATABASE FUNCTIONS
+// ==============================
+
 function initCosmicDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(COSMIC_CONFIG.DB_NAME, COSMIC_CONFIG.DB_VERSION);
@@ -121,57 +145,137 @@ function initCosmicDB() {
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             
-            // Create cosmic models store
             if (!db.objectStoreNames.contains(COSMIC_CONFIG.STORE_NAME)) {
                 const store = db.createObjectStore(COSMIC_CONFIG.STORE_NAME, {
                     keyPath: 'id',
                     autoIncrement: true
                 });
                 
-                // Create cosmic indices
                 store.createIndex('name', 'name', { unique: false });
                 store.createIndex('type', 'type', { unique: false });
                 store.createIndex('uploadDate', 'uploadDate', { unique: false });
                 store.createIndex('tags', 'tags', { multiEntry: true });
+                store.createIndex('source', 'source', { unique: false });
+                store.createIndex('cloudflareId', 'cloudflareId', { unique: false });
             }
         };
     });
 }
 
-// Setup Cosmic Event Listeners
-function setupCosmicEventListeners() {
-    // Divine Access Button
-    elements.adminAccessBtn.addEventListener('click', () => {
-        elements.adminLoginModal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
+function saveCosmicModel(model) {
+    return new Promise((resolve, reject) => {
+        const transaction = cosmicDB.transaction([COSMIC_CONFIG.STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(COSMIC_CONFIG.STORE_NAME);
+        const request = store.add(model);
         
-        // Focus on password input
-        setTimeout(() => {
-            elements.adminPassword.focus();
-        }, 100);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
     });
+}
+
+function updateCosmicModel(id, updates) {
+    return new Promise((resolve, reject) => {
+        const transaction = cosmicDB.transaction([COSMIC_CONFIG.STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(COSMIC_CONFIG.STORE_NAME);
+        
+        const getRequest = store.get(id);
+        
+        getRequest.onsuccess = () => {
+            const existingModel = getRequest.result;
+            const updatedModel = { ...existingModel, ...updates, id };
+            
+            const putRequest = store.put(updatedModel);
+            putRequest.onsuccess = () => resolve(putRequest.result);
+            putRequest.onerror = () => reject(putRequest.error);
+        };
+        
+        getRequest.onerror = () => reject(getRequest.error);
+    });
+}
+
+function deleteModelFromCosmos(id) {
+    return new Promise((resolve, reject) => {
+        const transaction = cosmicDB.transaction([COSMIC_CONFIG.STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(COSMIC_CONFIG.STORE_NAME);
+        const request = store.delete(id);
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function getAllCosmicModels() {
+    return new Promise((resolve, reject) => {
+        const transaction = cosmicDB.transaction([COSMIC_CONFIG.STORE_NAME], 'readonly');
+        const store = transaction.objectStore(COSMIC_CONFIG.STORE_NAME);
+        const request = store.getAll();
+        
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// ==============================
+// EVENT LISTENERS
+// ==============================
+
+function setupEventListeners() {
+    // Divine Access Button
+    if (elements.adminAccessBtn) {
+        elements.adminAccessBtn.addEventListener('click', () => {
+            console.log('Divine Access clicked');
+            elements.adminLoginModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            setTimeout(() => {
+                if (elements.adminPassword) elements.adminPassword.focus();
+            }, 100);
+        });
+    }
     
     // Close Modal
-    elements.closeModal.addEventListener('click', () => {
-        elements.adminLoginModal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        resetLoginForm();
+    elements.modalCloseBtns.forEach(btn => {
+        btn.addEventListener('click', closeModal);
     });
     
     // Login
-    elements.loginBtn.addEventListener('click', handleDivineLogin);
-    elements.adminPassword.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleDivineLogin();
-    });
+    if (elements.loginBtn) {
+        elements.loginBtn.addEventListener('click', handleDivineLogin);
+    }
+    
+    if (elements.adminPassword) {
+        elements.adminPassword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleDivineLogin();
+        });
+    }
     
     // Logout
-    elements.logoutBtn.addEventListener('click', handleDivineLogout);
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleDivineLogout);
+    }
     
     // Upload Model
-    elements.uploadBtn.addEventListener('click', handleCosmicUpload);
+    if (elements.uploadBtn) {
+        elements.uploadBtn.addEventListener('click', handleCosmicUpload);
+    }
     
     // Add by URL
-    elements.addUrlBtn.addEventListener('click', handleAddByURL);
+    if (elements.addUrlBtn) {
+        elements.addUrlBtn.addEventListener('click', handleAddByURL);
+    }
+    
+    // Cloudflare Add
+    if (elements.addCloudflareBtn) {
+        elements.addCloudflareBtn.addEventListener('click', handleCloudflareAdd);
+    }
+    
+    // Refresh Cloudflare
+    if (elements.refreshCloudflareBtn) {
+        elements.refreshCloudflareBtn.addEventListener('click', async () => {
+            await fetchAndRenderAllModels();
+            showCosmicNotification('Cloudflare models refreshed', 'success');
+        });
+    }
     
     // Portal Navigation
     elements.portalCards.forEach(card => {
@@ -196,9 +300,7 @@ function setupCosmicEventListeners() {
     // Close Modal on Outside Click
     window.addEventListener('click', (e) => {
         if (e.target === elements.adminLoginModal) {
-            elements.adminLoginModal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-            resetLoginForm();
+            closeModal();
         }
     });
     
@@ -206,57 +308,28 @@ function setupCosmicEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (elements.adminLoginModal.style.display === 'block') {
-                elements.adminLoginModal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-                resetLoginForm();
+                closeModal();
             }
         }
     });
     
-    // Setup mobile-specific events
-    if (isMobile) {
-        setupMobileEvents();
-    }
-    
     // Handle window resize
-    window.addEventListener('resize', handleResize);
-}
-
-// Setup Mobile Events
-function setupMobileEvents() {
-    // Add touch feedback for buttons
-    const buttons = document.querySelectorAll('.divine-button, .portal-card, .social-icon');
-    buttons.forEach(button => {
-        button.addEventListener('touchstart', () => {
-            button.classList.add('touch-active');
-        });
-        
-        button.addEventListener('touchend', () => {
-            setTimeout(() => {
-                button.classList.remove('touch-active');
-            }, 150);
-        });
-    });
-    
-    // Prevent long press context menu
-    document.addEventListener('contextmenu', (e) => {
-        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') {
-            e.preventDefault();
+    window.addEventListener('resize', () => {
+        detectMobile();
+        if (window.innerWidth !== window.innerHeight) {
+            initDivineParticles();
         }
     });
 }
 
-// Handle Window Resize
-function handleResize() {
-    detectMobile();
-    
-    // Reinitialize particles on resize
-    if (window.innerWidth !== window.innerHeight) {
-        initDivineParticles();
+function closeModal() {
+    if (elements.adminLoginModal) {
+        elements.adminLoginModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        resetLoginForm();
     }
 }
 
-// Setup Drag & Drop
 function setupDragAndDrop() {
     const uploadAreas = document.querySelectorAll('.upload-area');
     
@@ -283,7 +356,6 @@ function setupDragAndDrop() {
                 if (input) {
                     input.files = files;
                     
-                    // Show file name
                     const fileName = files[0].name;
                     area.querySelector('span').textContent = fileName.substring(0, 20) + (fileName.length > 20 ? '...' : '');
                     area.querySelector('i').className = 'fas fa-check-circle';
@@ -300,38 +372,16 @@ function setupDragAndDrop() {
     });
 }
 
-// Switch Portal
-function switchPortal(portalId) {
-    // Update active portal card
-    elements.portalCards.forEach(card => {
-        card.classList.remove('active');
-        if (card.dataset.portal === portalId) {
-            card.classList.add('active');
-        }
-    });
-    
-    // Show active portal content
-    elements.portalContents.forEach(content => {
-        content.classList.remove('active');
-        if (content.id === `${portalId}Portal`) {
-            content.classList.add('active');
-        }
-    });
-    
-    // Special handling for manage portal
-    if (portalId === 'manage') {
-        loadAdminModels();
-    }
-}
+// ==============================
+// AUTHENTICATION HANDLERS
+// ==============================
 
-// Divine Login Handler
 function handleDivineLogin() {
     const password = elements.adminPassword.value.trim();
     
     if (password === COSMIC_CONFIG.ADMIN_PASSWORD) {
         isDivineAdmin = true;
         
-        // Cosmic transition effect
         elements.adminLoginModal.style.opacity = '0';
         setTimeout(() => {
             elements.adminLoginModal.style.display = 'none';
@@ -339,13 +389,11 @@ function handleDivineLogin() {
             elements.mainWebsite.style.display = 'none';
             document.body.style.overflow = 'auto';
             
-            // Load admin models
             loadAdminModels();
+            updateCloudflareStatus();
             
-            // Show cosmic welcome
             showCosmicNotification('Welcome to Divine Administration Portal', 'success');
             
-            // Add mobile-specific class
             if (isMobile) {
                 document.body.classList.add('admin-mode');
             }
@@ -356,7 +404,6 @@ function handleDivineLogin() {
         elements.loginError.textContent = 'Invalid cosmic passcode';
         elements.loginError.style.opacity = '1';
         
-        // Shake animation
         elements.adminPassword.style.animation = 'shake 0.5s';
         setTimeout(() => {
             elements.adminPassword.style.animation = '';
@@ -364,18 +411,15 @@ function handleDivineLogin() {
     }
 }
 
-// Divine Logout Handler
 function handleDivineLogout() {
     isDivineAdmin = false;
     
-    // Cosmic transition
     elements.adminPanel.style.opacity = '0';
     setTimeout(() => {
         elements.adminPanel.style.display = 'none';
         elements.mainWebsite.style.display = 'block';
         elements.adminPanel.style.opacity = '1';
         
-        // Remove mobile admin class
         if (isMobile) {
             document.body.classList.remove('admin-mode');
         }
@@ -385,21 +429,22 @@ function handleDivineLogout() {
     
     resetUploadForm();
     resetURLForm();
+    resetCloudflareForm();
 }
 
-// Reset Forms
 function resetLoginForm() {
-    elements.adminPassword.value = '';
-    elements.loginError.textContent = '';
-    elements.loginError.style.opacity = '0';
+    if (elements.adminPassword) elements.adminPassword.value = '';
+    if (elements.loginError) {
+        elements.loginError.textContent = '';
+        elements.loginError.style.opacity = '0';
+    }
 }
 
 function resetUploadForm() {
-    elements.modelName.value = '';
-    elements.modelThumbnail.value = '';
-    elements.modelFile.value = '';
+    if (elements.modelName) elements.modelName.value = '';
+    if (elements.modelThumbnail) elements.modelThumbnail.value = '';
+    if (elements.modelFile) elements.modelFile.value = '';
     
-    // Reset upload area text
     const uploadAreas = document.querySelectorAll('.upload-area span');
     uploadAreas.forEach(area => {
         if (!area.querySelector('i')) {
@@ -409,13 +454,24 @@ function resetUploadForm() {
 }
 
 function resetURLForm() {
-    elements.urlModelName.value = '';
-    elements.glbUrl.value = '';
-    elements.thumbnailUrl.value = '';
-    elements.modelTags.value = '';
+    if (elements.urlModelName) elements.urlModelName.value = '';
+    if (elements.glbUrl) elements.glbUrl.value = '';
+    if (elements.thumbnailUrl) elements.thumbnailUrl.value = '';
+    if (elements.modelTags) elements.modelTags.value = '';
 }
 
-// Cosmic Upload Handler
+function resetCloudflareForm() {
+    if (elements.cfModelName) elements.cfModelName.value = '';
+    if (elements.cfGlbUrl) elements.cfGlbUrl.value = '';
+    if (elements.cfThumbnailUrl) elements.cfThumbnailUrl.value = '';
+    if (elements.cfModelTags) elements.cfModelTags.value = '';
+    if (elements.syncToAll) elements.syncToAll.checked = true;
+}
+
+// ==============================
+// UPLOAD HANDLERS
+// ==============================
+
 async function handleCosmicUpload() {
     const name = elements.modelName.value.trim();
     const thumbnailFile = elements.modelThumbnail.files[0];
@@ -426,9 +482,8 @@ async function handleCosmicUpload() {
         return;
     }
     
-    // Validate file sizes for mobile
     if (isMobile) {
-        const maxSize = 50 * 1024 * 1024; // 50MB max for mobile
+        const maxSize = 50 * 1024 * 1024;
         if (glbFile.size > maxSize) {
             showCosmicNotification('File too large for mobile upload (max 50MB)', 'error');
             return;
@@ -439,30 +494,27 @@ async function handleCosmicUpload() {
         showUploadStatus(true);
         updateCosmicProgress(10, 'Initializing cosmic transfer...');
         
-        // Read thumbnail
         const thumbnail = await readFileAsDataURL(thumbnailFile);
         
         updateCosmicProgress(40, 'Processing divine model...');
         
-        // Read GLB file
         const glbData = await readFileAsArrayBuffer(glbFile);
         
         updateCosmicProgress(80, 'Storing in cosmic database...');
         
-        // Create cosmic model
         const model = {
             name,
             thumbnail,
             glbData: new Uint8Array(glbData),
             fileName: `${name.replace(/\s+/g, '_').toLowerCase()}_divine.glb`,
             type: 'upload',
+            source: 'local',
             uploadDate: new Date().toISOString(),
             tags: ['divine', 'cosmic', 'uploaded'],
             fileSize: glbFile.size,
             securitySignature: COSMIC_CONFIG.SECURITY_SIGNATURE
         };
         
-        // Save to cosmic database
         await saveCosmicModel(model);
         
         updateCosmicProgress(100, 'Cosmic upload complete!');
@@ -470,7 +522,7 @@ async function handleCosmicUpload() {
         setTimeout(() => {
             resetUploadForm();
             showUploadStatus(false);
-            loadCosmicModels();
+            fetchAndRenderAllModels();
             loadAdminModels();
             showCosmicNotification('Model uploaded to cosmos!', 'success');
         }, 1000);
@@ -482,14 +534,12 @@ async function handleCosmicUpload() {
     }
 }
 
-// Add by URL Handler
 async function handleAddByURL() {
     const name = elements.urlModelName.value.trim();
     const glbUrl = elements.glbUrl.value.trim();
     const thumbnailUrl = elements.thumbnailUrl.value.trim();
     const tags = elements.modelTags.value.split(',').map(t => t.trim()).filter(t => t);
     
-    // Validation
     if (!name || !glbUrl) {
         showCosmicNotification('Please provide name and GLB URL', 'error');
         return;
@@ -504,7 +554,6 @@ async function handleAddByURL() {
         showUploadStatus(true);
         updateCosmicProgress(20, 'Validating cosmic URL...');
         
-        // Validate URL (HEAD request)
         const isValid = await validateGLBURL(glbUrl);
         if (!isValid) {
             throw new Error('URL does not point to valid GLB file');
@@ -512,20 +561,19 @@ async function handleAddByURL() {
         
         updateCosmicProgress(80, 'Adding to cosmic library...');
         
-        // Create URL model
         const model = {
             name,
             glbUrl,
             thumbnailUrl: thumbnailUrl || null,
             fileName: glbUrl.split('/').pop() || `${name}.glb`,
             type: 'url',
+            source: 'external',
             uploadDate: new Date().toISOString(),
             tags: ['url', 'cosmic', ...tags],
-            fileSize: 0, // Will be fetched later if needed
+            fileSize: 0,
             securitySignature: COSMIC_CONFIG.SECURITY_SIGNATURE
         };
         
-        // Save to database
         await saveCosmicModel(model);
         
         updateCosmicProgress(100, 'Added to cosmic collection!');
@@ -533,7 +581,7 @@ async function handleAddByURL() {
         setTimeout(() => {
             showUploadStatus(false);
             resetURLForm();
-            loadCosmicModels();
+            fetchAndRenderAllModels();
             loadAdminModels();
             showCosmicNotification('Cosmic URL added successfully!', 'success');
         }, 1000);
@@ -545,99 +593,256 @@ async function handleAddByURL() {
     }
 }
 
-// Validate GLB URL (lightweight check)
-async function validateGLBURL(url) {
+async function handleCloudflareAdd() {
+    const name = elements.cfModelName.value.trim();
+    const glbUrl = elements.cfGlbUrl.value.trim();
+    const thumbnailUrl = elements.cfThumbnailUrl.value.trim();
+    const tags = elements.cfModelTags.value.split(',').map(t => t.trim()).filter(t => t);
+    const syncToAll = elements.syncToAll.checked;
+    
+    if (!name || !glbUrl) {
+        showCosmicNotification('Please provide name and GLB URL', 'error');
+        return;
+    }
+    
+    if (!isLikelyGlbUrl(glbUrl)) {
+        showCosmicNotification('URL does not appear to be a GLB file', 'error');
+        return;
+    }
+    
     try {
-        // Quick check for .glb extension
-        if (!url.toLowerCase().endsWith('.glb')) {
-            return false;
+        showUploadStatus(true);
+        updateCosmicProgress(20, 'Validating Cloudflare URL...');
+        
+        const isValid = await probeUrlHEAD(glbUrl);
+        if (!isValid) {
+            throw new Error('GLB URL validation failed');
         }
         
-        // For mobile, do a lightweight check
-        if (isMobile) {
-            return true; // Assume valid for mobile to save bandwidth
+        updateCosmicProgress(50, 'Building cosmic model...');
+        
+        const model = buildModelFromInputs(name, glbUrl, thumbnailUrl, tags);
+        
+        updateCosmicProgress(80, 'Saving locally...');
+        
+        const localId = await saveCosmicModel(model);
+        
+        if (syncToAll) {
+            updateCosmicProgress(90, 'Syncing to Cloudflare...');
+            
+            const cloudId = await persistToWorkerAdd(model);
+            
+            model.cloudflareId = cloudId;
+            await updateCosmicModel(localId, model);
         }
         
-        // For desktop, do a HEAD request
-        const response = await fetch(url, { method: 'HEAD' });
-        return response.ok;
-    } catch {
-        return false;
+        updateCosmicProgress(100, 'Cosmic sync complete!');
+        
+        setTimeout(() => {
+            showUploadStatus(false);
+            resetCloudflareForm();
+            fetchAndRenderAllModels();
+            loadAdminModels();
+            
+            if (syncToAll) {
+                showCosmicNotification('Model synced to all users via Cloudflare!', 'success');
+            } else {
+                showCosmicNotification('Model added locally', 'success');
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Cloudflare addition failed:', error);
+        showUploadStatus(false);
+        showCosmicNotification('Failed to sync: ' + error.message, 'error');
     }
 }
 
-// File Reader Helpers
-function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => resolve(event.target.result);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-    });
+// ==============================
+// CLOUDFLARE FUNCTIONS
+// ==============================
+
+function isLikelyGlbUrl(url) {
+    const glbExtensions = ['.glb', '.gltf'];
+    const urlLower = url.toLowerCase();
+    return glbExtensions.some(ext => urlLower.includes(ext)) || 
+           urlLower.includes('glb') || 
+           urlLower.includes('model/gltf-binary');
 }
 
-function readFileAsArrayBuffer(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => resolve(event.target.result);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsArrayBuffer(file);
-    });
-}
-
-// Save Cosmic Model
-function saveCosmicModel(model) {
-    return new Promise((resolve, reject) => {
-        const transaction = cosmicDB.transaction([COSMIC_CONFIG.STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(COSMIC_CONFIG.STORE_NAME);
-        const request = store.add(model);
+async function probeUrlHEAD(url) {
+    try {
+        if (isMobile) {
+            return true;
+        }
         
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-// Load Cosmic Models
-async function loadCosmicModels() {
-    const models = await getAllCosmicModels();
-    renderCosmicModels(models, elements.modelsGrid, false);
-}
-
-// Load Admin Models
-async function loadAdminModels() {
-    const models = await getAllCosmicModels();
-    renderCosmicModels(models, elements.adminModelsGrid, true);
-}
-
-// Get All Cosmic Models
-function getAllCosmicModels() {
-    return new Promise((resolve, reject) => {
-        const transaction = cosmicDB.transaction([COSMIC_CONFIG.STORE_NAME], 'readonly');
-        const store = transaction.objectStore(COSMIC_CONFIG.STORE_NAME);
-        const request = store.getAll();
+        const response = await fetch(url, { 
+            method: 'HEAD',
+            mode: 'no-cors'
+        });
         
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => reject(request.error);
-    });
+        return true;
+    } catch {
+        return url.startsWith('http') && url.includes('://');
+    }
 }
 
-// Render Cosmic Models
+function buildModelFromInputs(name, glbUrl, thumbnailUrl, tags) {
+    return {
+        name,
+        glbUrl,
+        thumbnailUrl: thumbnailUrl || `https://images.unsplash.com/photo-${Math.random().toString(36).substr(2, 9)}?w=400&h=300&fit=crop`,
+        fileName: glbUrl.split('/').pop() || `${name.replace(/\s+/g, '_').toLowerCase()}.glb`,
+        type: 'url',
+        source: 'cloudflare',
+        uploadDate: new Date().toISOString(),
+        tags: ['cloudflare', 'dynamic', ...tags],
+        fileSize: 0,
+        securitySignature: COSMIC_CONFIG.SECURITY_SIGNATURE,
+        syncDate: new Date().toISOString()
+    };
+}
+
+async function persistToWorkerAdd(model) {
+    try {
+        const response = await fetch(`${COSMIC_CONFIG.CLOUDFLARE_WORKER_URL}/add`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': COSMIC_CONFIG.CLOUDFLARE_ADMIN_SECRET
+            },
+            body: JSON.stringify(model)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Worker responded with ${response.status}`);
+        }
+        
+        const result = await response.json();
+        return result.id || Date.now().toString();
+        
+    } catch (error) {
+        console.warn('Worker sync failed, continuing locally:', error);
+        return null;
+    }
+}
+
+async function fetchAndRenderAllModels() {
+    try {
+        const [localModels, cloudflareModels] = await Promise.all([
+            getAllCosmicModels(),
+            fetchCloudflareModels()
+        ]);
+        
+        this.cloudflareModels = cloudflareModels;
+        
+        const mergedModels = mergeModels(localModels, cloudflareModels);
+        
+        renderCosmicModels(mergedModels, elements.modelsGrid, false);
+        
+        if (isDivineAdmin && elements.adminModelsGrid) {
+            renderCosmicModels(mergedModels, elements.adminModelsGrid, true);
+        }
+        
+        updateCloudflareStatus();
+        
+        return mergedModels;
+        
+    } catch (error) {
+        console.error('Failed to fetch and render models:', error);
+        return [];
+    }
+}
+
+async function fetchCloudflareModels() {
+    try {
+        const response = await fetch(COSMIC_CONFIG.MODELS_JSON_URL, {
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch models.json: ${response.status}`);
+        }
+        
+        const models = await response.json();
+        return Array.isArray(models) ? models : [];
+        
+    } catch (error) {
+        console.warn('Failed to fetch Cloudflare models:', error);
+        return [];
+    }
+}
+
+function mergeModels(localModels, cloudflareModels) {
+    const mergedModels = [...localModels];
+    
+    cloudflareModels.forEach(cloudModel => {
+        const existingIndex = mergedModels.findIndex(m => 
+            m.name === cloudModel.name || 
+            (m.cloudflareId && m.cloudflareId === cloudModel.id)
+        );
+        
+        if (existingIndex >= 0) {
+            mergedModels[existingIndex] = {
+                ...mergedModels[existingIndex],
+                ...cloudModel,
+                source: 'cloudflare',
+                updatedFromCloud: true
+            };
+        } else {
+            mergedModels.push({
+                ...cloudModel,
+                source: 'cloudflare'
+            });
+        }
+    });
+    
+    mergedModels.sort((a, b) => 
+        new Date(b.uploadDate || b.syncDate) - new Date(a.uploadDate || a.syncDate)
+    );
+    
+    return mergedModels;
+}
+
+function startCloudflarePolling() {
+    if (cloudflarePollingInterval) {
+        clearInterval(cloudflarePollingInterval);
+    }
+    
+    fetchAndRenderAllModels();
+    
+    cloudflarePollingInterval = setInterval(() => {
+        fetchAndRenderAllModels();
+    }, COSMIC_CONFIG.POLL_INTERVAL);
+}
+
+function updateCloudflareStatus() {
+    if (elements.cloudModelCount) {
+        elements.cloudModelCount.textContent = cloudflareModels.length;
+    }
+}
+
+// ==============================
+// MODEL MANAGEMENT
+// ==============================
+
 function renderCosmicModels(models, container, isAdminView) {
+    if (!container) return;
+    
     container.innerHTML = '';
     
     if (!models || models.length === 0) {
-        if (container === elements.modelsGrid) {
+        if (container === elements.modelsGrid && elements.emptyState) {
             elements.emptyState.style.display = 'block';
         }
         return;
     }
     
-    if (container === elements.modelsGrid) {
+    if (container === elements.modelsGrid && elements.emptyState) {
         elements.emptyState.style.display = 'none';
     }
-    
-    // Sort by upload date (newest first)
-    models.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
     
     models.forEach((model, index) => {
         const card = createCosmicModelCard(model, isAdminView);
@@ -646,12 +851,10 @@ function renderCosmicModels(models, container, isAdminView) {
     });
 }
 
-// Create Cosmic Model Card
 function createCosmicModelCard(model, isAdminView) {
     const card = document.createElement('div');
     card.className = `divine-card model-card animate__animated animate__fadeInUp`;
     
-    // Determine thumbnail source
     let thumbnailSrc = '';
     if (model.thumbnail) {
         thumbnailSrc = model.thumbnail;
@@ -669,13 +872,22 @@ function createCosmicModelCard(model, isAdminView) {
     ).join('');
     
     const fileSize = model.fileSize ? formatFileSize(model.fileSize) : 'Unknown';
-    const uploadDate = new Date(model.uploadDate).toLocaleDateString();
+    const uploadDate = new Date(model.uploadDate || model.syncDate).toLocaleDateString();
+    
+    let sourceBadge = '';
+    if (model.source === 'cloudflare') {
+        sourceBadge = '<div class="model-source-badge cloudflare-badge"><i class="fas fa-cloud"></i> Cloudflare</div>';
+    } else if (model.source === 'external') {
+        sourceBadge = '<div class="model-source-badge"><i class="fas fa-globe"></i> URL</div>';
+    } else {
+        sourceBadge = '<div class="model-source-badge"><i class="fas fa-upload"></i> Local</div>';
+    }
     
     card.innerHTML = `
         <div class="model-preview">
             ${previewHtml}
             <div class="model-type-badge">
-                ${model.type === 'url' ? '<i class="fas fa-globe"></i> URL' : '<i class="fas fa-upload"></i> Upload'}
+                ${sourceBadge}
             </div>
         </div>
         <div class="model-info">
@@ -689,6 +901,7 @@ function createCosmicModelCard(model, isAdminView) {
                     <i class="fas fa-weight"></i>
                     ${fileSize}
                 </span>
+                ${model.source === 'cloudflare' ? '<span class="meta-item"><i class="fas fa-sync-alt"></i> Live</span>' : ''}
             </div>
             <div class="model-tags">
                 ${tagsHtml}
@@ -710,7 +923,6 @@ function createCosmicModelCard(model, isAdminView) {
         ` : ''}
     `;
     
-    // Add event listeners
     const downloadBtn = card.querySelector('.download-btn');
     downloadBtn.addEventListener('click', () => downloadCosmicModel(model));
     
@@ -722,13 +934,11 @@ function createCosmicModelCard(model, isAdminView) {
     return card;
 }
 
-// Download Cosmic Model
 async function downloadCosmicModel(model) {
     try {
         showCosmicNotification('Initiating cosmic download...', 'warning');
         
         if (model.type === 'url' && model.glbUrl) {
-            // For URL models, open in new tab for mobile
             if (isMobile) {
                 window.open(model.glbUrl, '_blank');
             } else {
@@ -741,12 +951,10 @@ async function downloadCosmicModel(model) {
             }
             
         } else if (model.glbData) {
-            // For uploaded models
             const blob = new Blob([model.glbData], { type: 'model/gltf-binary' });
             const url = URL.createObjectURL(blob);
             
             if (isMobile) {
-                // For mobile, open in new tab
                 window.open(url, '_blank');
             } else {
                 const link = document.createElement('a');
@@ -768,7 +976,6 @@ async function downloadCosmicModel(model) {
     }
 }
 
-// Delete Cosmic Model
 async function deleteCosmicModel(id) {
     if (!confirm('Remove this model from the cosmos?')) {
         return;
@@ -776,8 +983,7 @@ async function deleteCosmicModel(id) {
     
     try {
         await deleteModelFromCosmos(id);
-        await loadCosmicModels();
-        await loadAdminModels();
+        await fetchAndRenderAllModels();
         showCosmicNotification('Model removed from cosmos', 'warning');
     } catch (error) {
         console.error('Deletion failed:', error);
@@ -785,19 +991,51 @@ async function deleteCosmicModel(id) {
     }
 }
 
-// Delete from Cosmos
-function deleteModelFromCosmos(id) {
+async function loadAdminModels() {
+    const models = await getAllCosmicModels();
+    const mergedModels = mergeModels(models, cloudflareModels);
+    renderCosmicModels(mergedModels, elements.adminModelsGrid, true);
+}
+
+// ==============================
+// UTILITY FUNCTIONS
+// ==============================
+
+function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
-        const transaction = cosmicDB.transaction([COSMIC_CONFIG.STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(COSMIC_CONFIG.STORE_NAME);
-        const request = store.delete(id);
-        
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
     });
 }
 
-// Format File Size
+function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+async function validateGLBURL(url) {
+    try {
+        if (!url.toLowerCase().endsWith('.glb')) {
+            return false;
+        }
+        
+        if (isMobile) {
+            return true;
+        }
+        
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -806,8 +1044,9 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-// Show/Hide Upload Status
 function showUploadStatus(show) {
+    if (!elements.uploadStatus) return;
+    
     if (show) {
         elements.uploadStatus.style.display = 'block';
         elements.uploadStatus.style.opacity = '1';
@@ -821,27 +1060,51 @@ function showUploadStatus(show) {
     }
 }
 
-// Update Cosmic Progress
 function updateCosmicProgress(percent, text) {
+    if (!elements.progressFill || !elements.statusText || !elements.statusPercent) return;
+    
     elements.progressFill.style.width = `${percent}%`;
     elements.statusText.textContent = text;
     elements.statusPercent.textContent = `${percent}%`;
 }
 
-// Cosmic Effects
+function switchPortal(portalId) {
+    elements.portalCards.forEach(card => {
+        card.classList.remove('active');
+        if (card.dataset.portal === portalId) {
+            card.classList.add('active');
+        }
+    });
+    
+    elements.portalContents.forEach(content => {
+        content.classList.remove('active');
+        if (content.id === `${portalId}Portal`) {
+            content.classList.add('active');
+        }
+    });
+    
+    if (portalId === 'manage') {
+        loadAdminModels();
+    }
+    
+    if (portalId === 'cloudflare') {
+        updateCloudflareStatus();
+    }
+}
+
+// ==============================
+// COSMIC EFFECTS & ANIMATIONS
+// ==============================
+
 function initCosmicEffects() {
-    // Add CSS animations
+    initDivineParticles();
+    
     const style = document.createElement('style');
     style.textContent = `
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
             75% { transform: translateX(5px); }
-        }
-        
-        .touch-active {
-            transform: scale(0.98) !important;
-            opacity: 0.9 !important;
         }
         
         .model-tag {
@@ -876,13 +1139,80 @@ function initCosmicEffects() {
             padding: 4px 8px;
             border-radius: 10px;
             font-size: 0.7rem;
+        }
+        
+        .model-source-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             color: var(--cosmic-secondary);
+        }
+        
+        .cloudflare-badge {
+            color: var(--cloudflare-orange);
+        }
+        
+        .model-source-badge i {
+            font-size: 0.8rem;
         }
     `;
     document.head.appendChild(style);
 }
 
-// Animate Counters
+function initDivineParticles() {
+    const canvas = document.getElementById('divineCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const particles = [];
+    const particleCount = isMobile ? COSMIC_CONFIG.PARTICLE_COUNT / 2 : COSMIC_CONFIG.PARTICLE_COUNT;
+    
+    for (let i = 0; i < particleCount; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 1.5 + 0.5,
+            speedX: (Math.random() * 0.5 - 0.25) * (isMobile ? 0.5 : 1),
+            speedY: (Math.random() * 0.5 - 0.25) * (isMobile ? 0.5 : 1),
+            color: `rgba(${Math.random() * 100 + 155}, ${Math.random() * 100 + 155}, 255, ${Math.random() * 0.3 + 0.1})`
+        });
+    }
+    
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        particles.forEach(particle => {
+            particle.x += particle.speedX;
+            particle.y += particle.speedY;
+            
+            if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1;
+            if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1;
+            
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fillStyle = particle.color;
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
+            ctx.fillStyle = particle.color.replace(')', ', 0.1)').replace('rgb', 'rgba');
+            ctx.fill();
+        });
+        
+        requestAnimationFrame(animateParticles);
+    }
+    
+    animateParticles();
+    
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+}
+
 function animateCounters() {
     const counters = document.querySelectorAll('.cosmic-count');
     
@@ -903,7 +1233,6 @@ function animateCounters() {
             }
         };
         
-        // Start animation when in viewport
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -917,7 +1246,6 @@ function animateCounters() {
     });
 }
 
-// Setup Scroll Animations
 function setupScrollAnimations() {
     const animatedElements = document.querySelectorAll('.animate-on-scroll');
     
@@ -933,72 +1261,10 @@ function setupScrollAnimations() {
     animatedElements.forEach(el => observer.observe(el));
 }
 
-// Divine Particles
-function initDivineParticles() {
-    const canvas = document.getElementById('divineCanvas');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    // Clear existing particles
-    divineParticles = [];
-    
-    // Create particles (fewer on mobile)
-    const particleCount = isMobile ? COSMIC_CONFIG.PARTICLE_COUNT / 2 : COSMIC_CONFIG.PARTICLE_COUNT;
-    
-    for (let i = 0; i < particleCount; i++) {
-        divineParticles.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 1.5 + 0.5,
-            speedX: (Math.random() * 0.5 - 0.25) * (isMobile ? 0.5 : 1),
-            speedY: (Math.random() * 0.5 - 0.25) * (isMobile ? 0.5 : 1),
-            color: `rgba(${Math.random() * 100 + 155}, ${Math.random() * 100 + 155}, 255, ${Math.random() * 0.3 + 0.1})`
-        });
-    }
-    
-    // Animation loop
-    function animateParticles() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        divineParticles.forEach(particle => {
-            // Update position
-            particle.x += particle.speedX;
-            particle.y += particle.speedY;
-            
-            // Bounce off edges
-            if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1;
-            if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1;
-            
-            // Draw particle
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fillStyle = particle.color;
-            ctx.fill();
-            
-            // Draw subtle glow
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
-            ctx.fillStyle = particle.color.replace(')', ', 0.1)').replace('rgb', 'rgba');
-            ctx.fill();
-        });
-        
-        requestAnimationFrame(animateParticles);
-    }
-    
-    animateParticles();
-    
-    // Resize handler
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        initDivineParticles(); // Reinitialize particles
-    });
-}
+// ==============================
+// NOTIFICATIONS
+// ==============================
 
-// Cosmic Notifications
 function showCosmicNotification(message, type = 'info') {
     const container = document.getElementById('notificationContainer') || createNotificationContainer();
     
@@ -1023,7 +1289,6 @@ function showCosmicNotification(message, type = 'info') {
     
     container.appendChild(notification);
     
-    // Auto remove after 4 seconds on mobile, 5 seconds on desktop
     const timeout = isMobile ? 4000 : 5000;
     setTimeout(() => {
         notification.style.opacity = '0';
@@ -1031,7 +1296,6 @@ function showCosmicNotification(message, type = 'info') {
         setTimeout(() => notification.remove(), 300);
     }, timeout);
     
-    // Close button
     notification.querySelector('.notification-close').addEventListener('click', () => {
         notification.remove();
     });
@@ -1045,7 +1309,24 @@ function createNotificationContainer() {
     return container;
 }
 
-// Add sample data function
+// ==============================
+// EXPORT FOR DEBUGGING
+// ==============================
+
+window.DivineCosmos = {
+    config: COSMIC_CONFIG,
+    db: () => cosmicDB,
+    models: getAllCosmicModels,
+    cloudflareModels: () => cloudflareModels,
+    isMobile: () => isMobile,
+    fetchCloudflareModels: fetchAndRenderAllModels,
+    showNotification: showCosmicNotification
+};
+
+// ==============================
+// SAMPLE DATA (Optional)
+// ==============================
+
 async function addSampleData() {
     const sampleModels = [
         {
@@ -1074,7 +1355,7 @@ async function addSampleData() {
             name: "Sacred Mandala",
             type: "url",
             glbUrl: "https://example.com/models/mandala.glb",
-            thumbnailUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h-300&fit=crop",
+            thumbnailUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop",
             fileName: "sacred_mandala.glb",
             uploadDate: new Date().toISOString(),
             tags: ["mandala", "meditation", "geometry", "sacred"],
@@ -1091,21 +1372,11 @@ async function addSampleData() {
         }
     }
     
-    // Refresh the display
-    await loadCosmicModels();
+    await fetchAndRenderAllModels();
     showCosmicNotification('Sample cosmic data added', 'success');
 }
 
-// Export for debugging
-window.DivineCosmos = {
-    config: COSMIC_CONFIG,
-    db: () => cosmicDB,
-    models: getAllCosmicModels,
-    addSampleData: addSampleData,
-    isMobile: () => isMobile
-};
-
-// Add sample data on first load (optional - uncomment if needed)
+// Uncomment to add sample data on first load
 // setTimeout(() => {
 //     getAllCosmicModels().then(models => {
 //         if (models.length === 0) {
@@ -1113,3 +1384,5 @@ window.DivineCosmos = {
 //         }
 //     });
 // }, 2000);
+
+console.log('✨ Divine Cosmos Script Loaded Successfully!');
