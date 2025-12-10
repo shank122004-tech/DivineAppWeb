@@ -205,33 +205,52 @@ async function initializeDivineCosmos() {
 // DATABASE FUNCTIONS
 // ==============================
 
+// Robust initDivineDB: ensures object store exists and prevents race conditions
 function initDivineDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DIVINE_CONFIG.DB_NAME, DIVINE_CONFIG.DB_VERSION);
-        
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            divineDB = request.result;
-            resolve();
-        };
-        
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            
-            if (!db.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
-                const store = db.createObjectStore(DIVINE_CONFIG.STORE_NAME, {
-                    keyPath: 'id',
-                    autoIncrement: true
-                });
-                
-                store.createIndex('name', 'name', { unique: false });
-                store.createIndex('type', 'type', { unique: false });
-                store.createIndex('source', 'source', { unique: false });
-                store.createIndex('uploadDate', 'uploadDate', { unique: false });
-                store.createIndex('tags', 'tags', { multiEntry: true });
-            }
-        };
-    });
+  return new Promise((resolve, reject) => {
+    const name = DIVINE_CONFIG.DB_NAME;
+    const baseVersion = DIVINE_CONFIG.DB_VERSION || 1;
+
+    function openDbWithVersion(version) {
+      const req = indexedDB.open(name, version);
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => console.warn('IndexedDB open blocked; close other tabs using site.');
+      
+      req.onsuccess = () => {
+        divineDB = req.result;
+        // if store exists, ready
+        if (divineDB.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
+          resolve();
+          return;
+        }
+        // store missing — close and attempt upgrade by reopening with +1 version
+        const newVersion = (divineDB.version || version) + 1;
+        divineDB.close();
+        console.warn(`Object store "${DIVINE_CONFIG.STORE_NAME}" not found. Upgrading DB to v${newVersion}...`);
+        openDbWithVersion(newVersion); // recursive attempt to trigger onupgradeneeded
+      };
+
+      req.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        console.info('onupgradeneeded fired for version', event.oldVersion, '->', event.newVersion);
+        if (!db.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
+          const store = db.createObjectStore(DIVINE_CONFIG.STORE_NAME, {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          store.createIndex('name', 'name', { unique: false });
+          store.createIndex('type', 'type', { unique: false });
+          store.createIndex('source', 'source', { unique: false });
+          store.createIndex('uploadDate', 'uploadDate', { unique: false });
+          store.createIndex('tags', 'tags', { multiEntry: true });
+          console.info('Created object store:', DIVINE_CONFIG.STORE_NAME);
+        }
+      };
+    }
+
+    // Start open attempt with configured version
+    openDbWithVersion(baseVersion);
+  });
 }
 
 function saveModel(model) {
