@@ -1,5 +1,5 @@
 // ==============================
-// DIVINE COSMIC UNIVERSE - Complete Edition
+// DIVINE COSMIC UNIVERSE - Auto-Refresh Edition
 // GitHub Hosted GLB Models System
 // ==============================
 
@@ -8,100 +8,47 @@ const DIVINE_CONFIG = {
     DB_NAME: 'DivineCosmosDB',
     DB_VERSION: 2,
     STORE_NAME: 'divine_models',
-    ADMIN_PASSWORD: "Shashank@122004",
     SECURITY_SIGNATURE: "DM-9937-COSMIC-SECURE",
-    
     // GitHub Configuration
     GITHUB_USERNAME: "shank122004-tech",
     GITHUB_REPO: "DivineAppWeb",
     MODELS_JSON_URL: "https://shank122004-tech.github.io/DivineAppWeb/models.json",
     
+    // Auto-Refresh Settings
+    POLL_INTERVAL_MS: 60000, // 60 seconds
+    RETRY_DELAY_MS: 10000,   // 10 seconds for retry
+    CHECK_ON_FOCUS: true,    // Check when tab gains focus
+    CHECK_ON_VISIBILITY: true, // Check when page becomes visible
+    
+    // Cache Settings
+    CACHE_DURATION: 300000,  // 5 minutes
+    ENABLE_CONDITIONAL_REQUESTS: true,
+    
     // Mobile settings
     MOBILE_BREAKPOINT: 768,
     PARTICLE_COUNT: 150,
     
-    // Sample models for first-time visitors
-    SAMPLE_MODELS: [
-        {
-            id: 1,
-            name: "Sacred Krishna Statue",
-            type: "github",
-            source: "github",
-            glbUrl: "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb
-",
-            thumbnailUrl: "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
-            fileName: "sacred_krishna.glb",
-            uploadDate: new Date().toISOString(),
-            tags: ["divine", "hindu", "krishna", "sacred"],
-            fileSize: 5242880,
-            description: "A divine statue of Lord Krishna playing flute",
-            securitySignature: "DM-9937-COSMIC-SECURE"
-        },
-        {
-            id: 2,
-            name: "Cosmic Buddha",
-            type: "github",
-            source: "github",
-            glbUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
-            thumbnailUrl: "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop",
-            fileName: "cosmic_buddha.glb",
-            uploadDate: new Date().toISOString(),
-            tags: ["buddha", "meditation", "peace", "sacred"],
-            fileSize: 4194304,
-            description: "Meditating Buddha statue for spiritual visualization",
-            securitySignature: "DM-9937-COSMIC-SECURE"
-        },
-        {
-            id: 3,
-            name: "Divine Lotus Mandala",
-            type: "github",
-            source: "github",
-            glbUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
-            thumbnailUrl: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop",
-            fileName: "lotus_mandala.glb",
-            uploadDate: new Date().toISOString(),
-            tags: ["mandala", "lotus", "meditation", "geometry"],
-            fileSize: 3145728,
-            description: "Sacred geometric pattern for meditation",
-            securitySignature: "DM-9937-COSMIC-SECURE"
-        },
-        {
-            id: 4,
-            name: "Shiva Nataraja",
-            type: "github",
-            source: "github",
-            glbUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
-            thumbnailUrl: "https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop",
-            fileName: "shiva_nataraja.glb",
-            uploadDate: new Date().toISOString(),
-            tags: ["shiva", "hindu", "dance", "sacred"],
-            fileSize: 6291456,
-            description: "Lord Shiva as the cosmic dancer Nataraja",
-            securitySignature: "DM-9937-COSMIC-SECURE"
-        },
-        {
-            id: 5,
-            name: "Golden Buddha",
-            type: "github",
-            source: "github",
-            glbUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
-            thumbnailUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop",
-            fileName: "golden_buddha.glb",
-            uploadDate: new Date().toISOString(),
-            tags: ["buddha", "gold", "meditation", "peace"],
-            fileSize: 7340032,
-            description: "Golden Buddha statue for meditation and peace",
-            securitySignature: "DM-9937-COSMIC-SECURE"
-        }
-    ]
+    // Default models for first-time visitors
+    DEFAULT_MODELS: []
 };
 
 // Global State
 let divineDB = null;
-let isDivineAdmin = false;
 let isMobile = false;
 let allModels = [];
 let filteredModels = [];
+
+// Auto-Refresh State
+let refreshState = {
+    lastETag: null,
+    lastModified: null,
+    lastChecked: null,
+    nextCheck: null,
+    isChecking: false,
+    checkInterval: null,
+    modelsCache: null,
+    cacheTimestamp: null
+};
 
 // DOM Elements Cache
 let elements = {};
@@ -130,13 +77,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         animateCounters();
         setupScrollAnimations();
         
-        // Load and render all models
-        await loadAndRenderModels();
+        // Load initial models with auto-refresh
+        await initializeAutoRefresh();
         
         // Hide loading overlay
         setTimeout(() => {
             showLoading(false);
-            showNotification('🌟 Divine Cosmos Ready', 'success');
+            showNotification('🌟 Divine Cosmos Ready - Auto-Refresh Active', 'success');
         }, 1000);
         
     } catch (error) {
@@ -150,52 +97,27 @@ function cacheElements() {
     elements = {
         // Main Website
         mainWebsite: document.getElementById('mainWebsite'),
-        adminAccessBtn: document.getElementById('adminAccessBtn'),
         exploreBtn: document.querySelector('.explore-btn'),
-        requestManifestationBtn: document.getElementById('requestManifestationBtn'),
         
         // Modals
-        adminLoginModal: document.getElementById('adminLoginModal'),
         modelPreviewModal: document.getElementById('modelPreviewModal'),
-        
-        // Login Elements
-        adminPassword: document.getElementById('adminPassword'),
-        loginBtn: document.getElementById('loginBtn'),
-        logoutBtn: document.getElementById('logoutBtn'),
-        loginError: document.getElementById('loginError'),
-        
-        // Admin Panel
-        adminPanel: document.getElementById('adminPanel'),
         
         // Model Grids
         modelsGrid: document.getElementById('modelsGrid'),
-        adminModelsGrid: document.getElementById('adminModelsGrid'),
         emptyState: document.getElementById('emptyState'),
         loadingSpinner: document.getElementById('loadingSpinner'),
-        totalModelsCount: document.getElementById('totalModelsCount'),
         
-        // Upload Portal
-        modelName: document.getElementById('modelName'),
-        modelThumbnail: document.getElementById('modelThumbnail'),
-        modelFile: document.getElementById('modelFile'),
-        modelTags: document.getElementById('modelTags'),
-        modelDescription: document.getElementById('modelDescription'),
-        uploadBtn: document.getElementById('uploadBtn'),
+        // Auto-Refresh Elements
+        refreshStatus: document.getElementById('refreshStatus'),
+        refreshIndicator: document.getElementById('refreshIndicator'),
+        manualRefreshBtn: document.getElementById('manualRefreshBtn'),
+        retryLoadBtn: document.getElementById('retryLoadBtn'),
+        lastChecked: document.getElementById('lastChecked'),
+        nextCheck: document.getElementById('nextCheck'),
+        loadInfo: document.getElementById('loadInfo'),
         
-        // GitHub Portal
-        githubModelName: document.getElementById('githubModelName'),
-        githubGlbUrl: document.getElementById('githubGlbUrl'),
-        githubThumbnailUrl: document.getElementById('githubThumbnailUrl'),
-        githubModelTags: document.getElementById('githubModelTags'),
-        convertToGhPages: document.getElementById('convertToGhPages'),
-        validateGithubUrlBtn: document.getElementById('validateGithubUrlBtn'),
-        addGithubUrlBtn: document.getElementById('addGithubUrlBtn'),
-        githubValidationResult: document.getElementById('githubValidationResult'),
-        
-        // Management Portal
-        modelSearch: document.getElementById('modelSearch'),
+        // Search and Filter
         searchModels: document.getElementById('searchModels'),
-        filterBtns: document.querySelectorAll('.filter-btn'),
         filterTags: document.querySelectorAll('.filter-tag'),
         
         // Model Preview
@@ -208,16 +130,6 @@ function cacheElements() {
         previewModelDesc: document.getElementById('previewModelDesc'),
         downloadPreviewBtn: document.getElementById('downloadPreviewBtn'),
         closePreviewBtn: document.querySelector('.close-preview-btn'),
-        
-        // Upload Status
-        uploadStatus: document.querySelector('.upload-status'),
-        progressFill: document.querySelector('.progress-fill'),
-        statusText: document.querySelector('.status-text'),
-        statusPercent: document.querySelector('.status-percent'),
-        
-        // Portal Navigation
-        portalCards: document.querySelectorAll('.portal-card'),
-        portalContents: document.querySelectorAll('.portal-content'),
         
         // Close Buttons
         closeModalBtns: document.querySelectorAll('.close-modal, .divine-close'),
@@ -236,216 +148,381 @@ function detectMobile() {
 
 async function initializeDivineCosmos() {
     await initDivineDB();
-    setupDragAndDrop();
 }
 
 // ==============================
-// DATABASE FUNCTIONS
+// AUTO-REFRESH SYSTEM
 // ==============================
 
-function initDivineDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DIVINE_CONFIG.DB_NAME, DIVINE_CONFIG.DB_VERSION);
-        
-        request.onerror = () => {
-            console.error('IndexedDB error:', request.error);
-            reject(request.error);
-        };
-        
-        request.onsuccess = () => {
-            divineDB = request.result;
-            console.log('✅ Divine Database initialized');
-            resolve();
-        };
-        
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            
-            // Create object store if it doesn't exist
-            if (!db.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
-                const store = db.createObjectStore(DIVINE_CONFIG.STORE_NAME, {
-                    keyPath: 'id',
-                    autoIncrement: true
-                });
-                
-                // Create indexes
-                store.createIndex('name', 'name', { unique: false });
-                store.createIndex('type', 'type', { unique: false });
-                store.createIndex('source', 'source', { unique: false });
-                store.createIndex('uploadDate', 'uploadDate', { unique: false });
-                store.createIndex('tags', 'tags', { multiEntry: true });
-                
-                console.log('✅ Created object store:', DIVINE_CONFIG.STORE_NAME);
-            }
-        };
-        
-        request.onblocked = () => {
-            console.warn('IndexedDB open blocked; close other tabs using site.');
-        };
-    });
+async function initializeAutoRefresh() {
+    console.log('🔄 Initializing auto-refresh system...');
+    
+    // Update status display
+    updateRefreshStatus('Initializing...');
+    
+    // Load initial models
+    await loadModelsFromGitHub();
+    
+    // Start periodic checking
+    startAutoRefresh();
+    
+    // Set up focus/visibility checks
+    if (DIVINE_CONFIG.CHECK_ON_FOCUS) {
+        window.addEventListener('focus', handleFocusCheck);
+    }
+    
+    if (DIVINE_CONFIG.CHECK_ON_VISIBILITY) {
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
 }
 
-function saveModel(model) {
-    return new Promise((resolve, reject) => {
-        if (!divineDB) {
-            reject(new Error('Database not initialized'));
-            return;
-        }
-        
-        const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
-        const request = store.add(model);
-        
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-function updateModel(id, updates) {
-    return new Promise((resolve, reject) => {
-        if (!divineDB) {
-            reject(new Error('Database not initialized'));
-            return;
-        }
-        
-        const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
-        
-        const getRequest = store.get(id);
-        
-        getRequest.onsuccess = () => {
-            const existingModel = getRequest.result;
-            if (!existingModel) {
-                reject(new Error('Model not found'));
-                return;
-            }
-            
-            const updatedModel = { ...existingModel, ...updates, id };
-            const putRequest = store.put(updatedModel);
-            
-            putRequest.onsuccess = () => resolve(putRequest.result);
-            putRequest.onerror = () => reject(putRequest.error);
-        };
-        
-        getRequest.onerror = () => reject(getRequest.error);
-    });
-}
-
-function deleteModel(id) {
-    return new Promise((resolve, reject) => {
-        if (!divineDB) {
-            reject(new Error('Database not initialized'));
-            return;
-        }
-        
-        const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
-        const request = store.delete(id);
-        
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
-}
-
-function getAllModels() {
-    return new Promise((resolve, reject) => {
-        if (!divineDB) {
-            resolve([]);
-            return;
-        }
-        
-        const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readonly');
-        const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
-        const request = store.getAll();
-        
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-// ==============================
-// MODEL MANAGEMENT
-// ==============================
-
-async function loadAndRenderModels() {
+async function loadModelsFromGitHub(forceRefresh = false) {
+    if (refreshState.isChecking && !forceRefresh) {
+        console.log('⚠️ Already checking for updates, skipping...');
+        return;
+    }
+    
     try {
-        // Show loading spinner
-        if (elements.loadingSpinner) {
-            elements.loadingSpinner.style.display = 'block';
+        refreshState.isChecking = true;
+        showRefreshIndicator(true);
+        
+        const now = new Date();
+        refreshState.lastChecked = now;
+        
+        // Update last checked display
+        if (elements.lastChecked) {
+            elements.lastChecked.textContent = formatTimeAgo(now);
         }
         
-        // Load models from multiple sources
-        const [localModels, remoteModels] = await Promise.all([
-            getAllModels(),
-            loadRemoteModels()
-        ]);
+        // Prepare fetch options with conditional requests
+        const fetchOptions = {
+            method: 'GET',
+            headers: {},
+            cache: 'no-cache'
+        };
         
-        // Merge models (remote models take precedence)
-        const mergedModels = mergeModels(remoteModels, localModels);
-        
-        // If no models, add sample models
-        if (mergedModels.length === 0) {
-            for (const model of DIVINE_CONFIG.SAMPLE_MODELS) {
-                await saveModel(model);
+        // Add conditional request headers if we have them
+        if (DIVINE_CONFIG.ENABLE_CONDITIONAL_REQUESTS) {
+            if (refreshState.lastETag) {
+                fetchOptions.headers['If-None-Match'] = refreshState.lastETag;
             }
-            allModels = DIVINE_CONFIG.SAMPLE_MODELS;
+            if (refreshState.lastModified) {
+                fetchOptions.headers['If-Modified-Since'] = refreshState.lastModified;
+            }
+        }
+        
+        // Add cache busting for non-conditional requests
+        if (!DIVINE_CONFIG.ENABLE_CONDITIONAL_REQUESTS || !refreshState.lastETag) {
+            const url = new URL(DIVINE_CONFIG.MODELS_JSON_URL);
+            url.searchParams.set('_', Date.now());
+            var fetchUrl = url.toString();
         } else {
-            allModels = mergedModels;
+            var fetchUrl = DIVINE_CONFIG.MODELS_JSON_URL;
         }
         
-        filteredModels = [...allModels];
+        console.log('🌐 Fetching models from:', fetchUrl);
         
-        // Update stats
-        updateModelCount(allModels.length);
+        const response = await fetch(fetchUrl, fetchOptions);
         
-        // Render models
-        renderModels(allModels, elements.modelsGrid, false);
-        
-        // Update admin grid if in admin mode
-        if (isDivineAdmin) {
-            renderModels(allModels, elements.adminModelsGrid, true);
-            if (elements.totalModelsCount) {
-                elements.totalModelsCount.textContent = allModels.length;
-            }
+        // Handle 304 Not Modified (no changes)
+        if (response.status === 304) {
+            console.log('✅ No changes detected (304)');
+            showNotification('Models are up to date', 'info');
+            
+            // Update cache timestamp
+            refreshState.cacheTimestamp = Date.now();
+            updateNextCheckTime();
+            
+            return false;
         }
         
-        // Hide loading spinner
-        if (elements.loadingSpinner) {
-            elements.loadingSpinner.style.display = 'none';
-        }
-        
-        // Show/hide empty state
-        if (elements.emptyState) {
-            elements.emptyState.style.display = allModels.length === 0 ? 'block' : 'none';
+        // Handle 200 OK (new data)
+        if (response.ok) {
+            const models = await response.json();
+            
+            // Save ETag and Last-Modified for next request
+            const etag = response.headers.get('ETag');
+            const lastModified = response.headers.get('Last-Modified');
+            
+            if (etag) refreshState.lastETag = etag;
+            if (lastModified) refreshState.lastModified = lastModified;
+            
+            console.log(`✅ Loaded ${models.length} models from GitHub`);
+            
+            // Process and render models
+            await processAndRenderModels(models);
+            
+            // Update cache
+            refreshState.modelsCache = models;
+            refreshState.cacheTimestamp = Date.now();
+            
+            // Show success notification
+            showNotification(`${models.length} models loaded successfully`, 'success');
+            
+            updateNextCheckTime();
+            return true;
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
     } catch (error) {
-        console.error('Failed to load models:', error);
-        showNotification('Failed to load divine models', 'error');
+        console.error('❌ Failed to load models:', error);
         
-        if (elements.loadingSpinner) {
-            elements.loadingSpinner.style.display = 'none';
+        // Try to use cache if available
+        if (refreshState.modelsCache && refreshState.cacheTimestamp) {
+            const cacheAge = Date.now() - refreshState.cacheTimestamp;
+            if (cacheAge < DIVINE_CONFIG.CACHE_DURATION) {
+                console.log('🔄 Using cached models...');
+                await processAndRenderModels(refreshState.modelsCache);
+                showNotification('Using cached models (offline mode)', 'warning');
+                return false;
+            }
+        }
+        
+        // Show error notification
+        showNotification(`Failed to load models: ${error.message}`, 'error');
+        
+        // Show empty state with retry button
+        if (elements.emptyState) {
+            elements.emptyState.style.display = 'block';
+        }
+        
+        if (elements.modelsGrid) {
+            elements.modelsGrid.innerHTML = '';
+        }
+        
+        return false;
+        
+    } finally {
+        refreshState.isChecking = false;
+        showRefreshIndicator(false);
+        
+        // Update next check time
+        updateNextCheckTime();
+    }
+}
+
+async function processAndRenderModels(models) {
+    if (!models || !Array.isArray(models)) {
+        console.error('Invalid models data:', models);
+        return;
+    }
+    
+    // Normalize and validate models
+    const normalizedModels = models.map(normalizeModel).filter(model => {
+        // Basic validation
+        return model && model.name && model.glbUrl;
+    });
+    
+    console.log(`🔄 Processing ${normalizedModels.length} valid models...`);
+    
+    // Update model count
+    updateModelCount(normalizedModels.length);
+    
+    // Update global state
+    allModels = normalizedModels;
+    filteredModels = [...allModels];
+    
+    // Render models
+    renderModels(allModels, elements.modelsGrid);
+    
+    // Update UI state
+    if (elements.emptyState) {
+        elements.emptyState.style.display = normalizedModels.length === 0 ? 'block' : 'none';
+    }
+    
+    if (elements.loadingSpinner) {
+        elements.loadingSpinner.style.display = 'none';
+    }
+    
+    // Animate new models if they exist
+    animateNewModels();
+}
+
+function normalizeModel(model) {
+    // Ensure consistent field names
+    const normalized = { ...model };
+    
+    // Normalize GLB URL
+    if (model.glbUrl) {
+        normalized.glbUrl = model.glbUrl;
+    } else if (model.src) {
+        normalized.glbUrl = model.src;
+    } else if (model.url) {
+        normalized.glbUrl = model.url;
+    }
+    
+    // Normalize thumbnail URL
+    if (model.thumbnailUrl) {
+        normalized.thumbnailUrl = model.thumbnailUrl;
+    } else if (model.thumbnail) {
+        normalized.thumbnailUrl = model.thumbnail;
+    } else if (model.image) {
+        normalized.thumbnailUrl = model.image;
+    } else {
+        // Default thumbnail based on name
+        normalized.thumbnailUrl = getDefaultThumbnail(model.name);
+    }
+    
+    // Ensure fileName
+    if (!normalized.fileName && normalized.glbUrl) {
+        normalized.fileName = normalized.glbUrl.split('/').pop() || 
+                             `${model.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
+    }
+    
+    // Ensure tags array
+    if (!normalized.tags || !Array.isArray(normalized.tags)) {
+        normalized.tags = ['divine', 'github'];
+    } else {
+        // Add github tag if not present
+        if (!normalized.tags.includes('github')) {
+            normalized.tags.push('github');
+        }
+    }
+    
+    // Ensure source
+    if (!normalized.source) {
+        normalized.source = 'github';
+    }
+    
+    // Ensure uploadDate
+    if (!normalized.uploadDate) {
+        normalized.uploadDate = new Date().toISOString();
+    }
+    
+    // Ensure description
+    if (!normalized.description) {
+        normalized.description = `Divine 3D model: ${model.name}`;
+    }
+    
+    // Generate unique ID if not present
+    if (!normalized.id) {
+        normalized.id = 'github_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    return normalized;
+}
+
+function startAutoRefresh() {
+    // Clear any existing interval
+    if (refreshState.checkInterval) {
+        clearInterval(refreshState.checkInterval);
+    }
+    
+    // Start new interval
+    refreshState.checkInterval = setInterval(async () => {
+        console.log('🔄 Auto-refresh check...');
+        await loadModelsFromGitHub();
+    }, DIVINE_CONFIG.POLL_INTERVAL_MS);
+    
+    console.log(`✅ Auto-refresh started (${DIVINE_CONFIG.POLL_INTERVAL_MS / 1000}s interval)`);
+    updateNextCheckTime();
+}
+
+function updateNextCheckTime() {
+    if (!refreshState.lastChecked) return;
+    
+    const nextCheck = new Date(refreshState.lastChecked.getTime() + DIVINE_CONFIG.POLL_INTERVAL_MS);
+    refreshState.nextCheck = nextCheck;
+    
+    if (elements.nextCheck) {
+        const secondsLeft = Math.floor((nextCheck - new Date()) / 1000);
+        if (secondsLeft > 0) {
+            elements.nextCheck.textContent = `${secondsLeft}s`;
+        } else {
+            elements.nextCheck.textContent = 'Soon';
         }
     }
 }
 
-function renderModels(models, container, isAdminView) {
+function updateRefreshStatus(status) {
+    if (elements.refreshStatus) {
+        const statusText = elements.refreshStatus.querySelector('span');
+        if (statusText) {
+            statusText.textContent = status;
+        }
+    }
+}
+
+function showRefreshIndicator(show) {
+    if (elements.refreshIndicator) {
+        if (show) {
+            elements.refreshIndicator.classList.add('active');
+        } else {
+            elements.refreshIndicator.classList.remove('active');
+        }
+    }
+}
+
+function handleFocusCheck() {
+    console.log('🔄 Tab focused, checking for updates...');
+    loadModelsFromGitHub();
+}
+
+function handleVisibilityChange() {
+    if (!document.hidden) {
+        console.log('🔄 Page visible, checking for updates...');
+        loadModelsFromGitHub();
+    }
+}
+
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    
+    if (diffSec < 60) {
+        return 'Just now';
+    } else if (diffSec < 3600) {
+        const min = Math.floor(diffSec / 60);
+        return `${min} minute${min !== 1 ? 's' : ''} ago`;
+    } else if (diffSec < 86400) {
+        const hours = Math.floor(diffSec / 3600);
+        return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    } else {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+}
+
+// ==============================
+// MODEL RENDERING
+// ==============================
+
+function renderModels(models, container) {
     if (!container) return;
+    
+    // Store current scroll position if we're updating
+    const wasScrolled = container.scrollTop > 0;
+    const scrollPos = container.scrollTop;
     
     container.innerHTML = '';
     
     if (!models || models.length === 0) {
+        container.innerHTML = `
+            <div class="cosmic-empty">
+                <div class="empty-orb">
+                    <i class="fas fa-cloud"></i>
+                </div>
+                <h3>No Divine Models Found</h3>
+                <p>Add models to GitHub repository to see them here</p>
+            </div>
+        `;
         return;
     }
     
     models.forEach((model, index) => {
-        const card = createModelCard(model, isAdminView);
+        const card = createModelCard(model);
         card.style.animationDelay = `${index * 0.1}s`;
         container.appendChild(card);
     });
+    
+    // Restore scroll position
+    if (wasScrolled) {
+        container.scrollTop = scrollPos;
+    }
 }
 
-function createModelCard(model, isAdminView) {
+function createModelCard(model) {
     const card = document.createElement('div');
     card.className = 'divine-card model-card animate-on-scroll';
     card.dataset.id = model.id;
@@ -461,14 +538,10 @@ function createModelCard(model, isAdminView) {
     let sourceBadge = '';
     if (model.source === 'github') {
         sourceBadge = '<div class="model-source-badge github-badge"><i class="fab fa-github"></i> GitHub</div>';
-    } else if (model.source === 'upload') {
-        sourceBadge = '<div class="model-source-badge upload-badge"><i class="fas fa-upload"></i> Local</div>';
-    } else {
-        sourceBadge = '<div class="model-source-badge url-badge"><i class="fas fa-globe"></i> URL</div>';
     }
     
     // Tags
-    const tags = model.tags || ['divine'];
+    const tags = model.tags || ['divine', 'github'];
     const tagsHtml = tags.slice(0, 3).map(tag => 
         `<span class="model-tag">${tag}</span>`
     ).join('');
@@ -481,7 +554,7 @@ function createModelCard(model, isAdminView) {
         day: 'numeric'
     });
     
-    // URL display - NEW FEATURE
+    // URL display
     const urlDisplay = glbUrl ? 
         `<div class="model-url">
             <i class="fas fa-link"></i>
@@ -499,7 +572,8 @@ function createModelCard(model, isAdminView) {
                     shadow-intensity="1"
                     environment-image="neutral"
                     loading="lazy"
-                    style="width: 100%; height: 100%;">
+                    style="width: 100%; height: 100%;"
+                    crossorigin="anonymous">
                 </model-viewer>
             ` : `
                 <img src="${thumbnailSrc}" alt="${model.name}" loading="lazy">
@@ -524,8 +598,8 @@ function createModelCard(model, isAdminView) {
                 ${tagsHtml}
             </div>
             <div class="model-badge">
-                <i class="fas fa-shield-alt"></i>
-                Divine Protection
+                <i class="fas fa-sync-alt"></i>
+                Auto-Updated
             </div>
         </div>
         <div class="model-actions">
@@ -538,23 +612,31 @@ function createModelCard(model, isAdminView) {
                 Download
             </button>
         </div>
-        ${isAdminView ? `
-            <button class="delete-btn" data-id="${model.id}" title="Remove from cosmos">
-                <i class="fas fa-trash"></i>
-            </button>
-        ` : ''}
     `;
     
     // Add event listeners
     const previewBtn = card.querySelector('.preview-btn');
     const downloadBtn = card.querySelector('.download-btn');
+    const modelViewer = card.querySelector('model-viewer');
     
     previewBtn.addEventListener('click', () => previewModel(model));
     downloadBtn.addEventListener('click', () => downloadModel(model));
     
-    if (isAdminView) {
-        const deleteBtn = card.querySelector('.delete-btn');
-        deleteBtn.addEventListener('click', () => deleteModelFromUI(model.id));
+    // Handle model-viewer errors
+    if (modelViewer) {
+        modelViewer.addEventListener('error', (e) => {
+            console.error('Model viewer error:', e);
+            modelViewer.innerHTML = `
+                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);color:white;flex-direction:column;gap:10px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:2rem;"></i>
+                    <span>3D Model Failed to Load</span>
+                    <button class="divine-button outline-btn" onclick="downloadModel(${JSON.stringify(model)})" style="margin-top:10px;">
+                        <i class="fas fa-download"></i>
+                        Download Instead
+                    </button>
+                </div>
+            `;
+        });
     }
     
     // Add click to copy URL functionality
@@ -570,43 +652,23 @@ function createModelCard(model, isAdminView) {
     return card;
 }
 
-function normalizeModel(model) {
-    // Ensure consistent field names
-    const normalized = { ...model };
-    
-    // Normalize GLB URL
-    if (model.glbUrl) {
-        normalized.glbUrl = model.glbUrl;
-    } else if (model.src) {
-        normalized.glbUrl = model.src;
-    } else if (model.url) {
-        normalized.glbUrl = model.url;
-    }
-    
-    // Normalize thumbnail URL
-    if (model.thumbnailUrl) {
-        normalized.thumbnailUrl = model.thumbnailUrl;
-    } else if (model.thumbnail) {
-        normalized.thumbnailUrl = model.thumbnail;
-    } else if (model.image) {
-        normalized.thumbnailUrl = model.image;
-    } else {
-        // Default thumbnail
-        normalized.thumbnailUrl = getDefaultThumbnail(model.name);
-    }
-    
-    // Ensure fileName
-    if (!normalized.fileName && normalized.glbUrl) {
-        normalized.fileName = normalized.glbUrl.split('/').pop() || `${model.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
-    }
-    
-    // Ensure tags array
-    if (!normalized.tags || !Array.isArray(normalized.tags)) {
-        normalized.tags = ['divine'];
-    }
-    
-    return normalized;
+function animateNewModels() {
+    // Add animation class to new models
+    const newCards = elements.modelsGrid.querySelectorAll('.model-card');
+    newCards.forEach(card => {
+        card.classList.add('fade-in-up');
+        
+        // Add pulse animation for newly added models
+        if (!card.dataset.animated) {
+            card.dataset.animated = 'true';
+            card.classList.add('new-model');
+        }
+    });
 }
+
+// ==============================
+// MODEL PREVIEW & DOWNLOAD
+// ==============================
 
 function previewModel(model) {
     if (!model.glbUrl) {
@@ -617,8 +679,7 @@ function previewModel(model) {
     // Update preview modal
     elements.previewModelName.textContent = model.name;
     elements.modelViewer.src = model.glbUrl;
-    elements.previewModelSource.textContent = model.source === 'github' ? 'GitHub' : 
-                                             model.source === 'upload' ? 'Local Upload' : 'External URL';
+    elements.previewModelSource.textContent = 'GitHub';
     elements.previewModelUrl.textContent = model.glbUrl;
     elements.previewModelDate.textContent = new Date(model.uploadDate).toLocaleDateString();
     elements.previewModelTags.textContent = model.tags ? model.tags.join(', ') : 'No tags';
@@ -634,13 +695,13 @@ function previewModel(model) {
 
 async function downloadModel(model) {
     try {
-        showNotification('Preparing divine download...', 'warning');
+        showNotification('Preparing download...', 'warning');
         
         if (!model.glbUrl) {
             throw new Error('No download URL available');
         }
         
-        // For GitHub URLs, use the raw URL
+        // For GitHub URLs, ensure we have the raw URL
         let downloadUrl = model.glbUrl;
         if (model.source === 'github') {
             downloadUrl = convertToRawGithubUrl(downloadUrl);
@@ -651,6 +712,7 @@ async function downloadModel(model) {
         link.href = downloadUrl;
         link.download = model.fileName || `${model.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
         link.target = '_blank';
+        link.rel = 'noopener noreferrer';
         
         // Trigger download
         document.body.appendChild(link);
@@ -660,7 +722,7 @@ async function downloadModel(model) {
         // Update download count
         await updateDownloadCount(model.id);
         
-        showNotification('Divine download initiated!', 'success');
+        showNotification('Download initiated!', 'success');
         
     } catch (error) {
         console.error('Download failed:', error);
@@ -668,443 +730,81 @@ async function downloadModel(model) {
     }
 }
 
-async function deleteModelFromUI(modelId) {
-    if (!confirm('Remove this divine model from the cosmos?')) {
-        return;
-    }
-    
-    try {
-        await deleteModel(modelId);
-        
-        // Remove from local arrays
-        allModels = allModels.filter(m => m.id !== modelId);
-        filteredModels = filteredModels.filter(m => m.id !== modelId);
-        
-        // Update UI
-        updateModelCount(allModels.length);
-        renderModels(allModels, elements.modelsGrid, false);
-        
-        if (isDivineAdmin) {
-            renderModels(allModels, elements.adminModelsGrid, true);
-            if (elements.totalModelsCount) {
-                elements.totalModelsCount.textContent = allModels.length;
-            }
-        }
-        
-        showNotification('Model removed from divine cosmos', 'warning');
-        
-    } catch (error) {
-        console.error('Deletion failed:', error);
-        showNotification('Failed to delete model', 'error');
-    }
-}
-
-// ==============================
-// URL DISPLAY FUNCTIONS
-// ==============================
-
-function truncateUrl(url, maxLength) {
-    if (url.length <= maxLength) return url;
-    
-    const start = url.substring(0, Math.floor(maxLength / 2) - 3);
-    const end = url.substring(url.length - Math.floor(maxLength / 2) + 3);
-    return start + '...' + end;
-}
-
-async function copyToClipboard(text) {
-    try {
-        await navigator.clipboard.writeText(text);
-        showNotification('URL copied to clipboard!', 'success');
-    } catch (err) {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showNotification('URL copied to clipboard!', 'success');
-    }
-}
-
-// ==============================
-// REMOTE MODELS LOADING
-// ==============================
-
-async function loadRemoteModels() {
-    try {
-        const timestamp = Date.now();
-        const url = `${DIVINE_CONFIG.MODELS_JSON_URL}?_=${timestamp}`;
-        
-        console.log('🌐 Loading remote models from:', url);
-        
-        const response = await fetch(url, {
-            cache: 'no-store',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const models = await response.json();
-        console.log(`✅ Loaded ${models.length} remote models`);
-        return Array.isArray(models) ? models.map(normalizeModel) : [];
-        
-    } catch (error) {
-        console.warn('Could not load remote models:', error.message);
-        return [];
-    }
-}
-
-function mergeModels(remoteModels, localModels) {
-    const merged = [...remoteModels];
-    const remoteUrls = new Set(remoteModels.map(m => m.glbUrl || m.id));
-    
-    // Add local models that aren't in remote
-    for (const localModel of localModels) {
-        const normalized = normalizeModel(localModel);
-        if (!remoteUrls.has(normalized.glbUrl || normalized.id)) {
-            merged.push(normalized);
-        }
-    }
-    
-    // Remove duplicates by ID and URL
-    const uniqueMap = new Map();
-    for (const model of merged) {
-        const key = model.glbUrl || model.id;
-        if (key && !uniqueMap.has(key)) {
-            uniqueMap.set(key, model);
-        }
-    }
-    
-    return Array.from(uniqueMap.values());
-}
-
-// ==============================
-// GITHUB URL HANDLING
-// ==============================
-
 function convertToRawGithubUrl(url) {
     try {
         const urlObj = new URL(url);
         
-        // Convert GitHub blob URL to raw URL
-        if (urlObj.hostname === 'github.com') {
-            const pathParts = urlObj.pathname.split('/');
-            if (pathParts[2] === 'blob') {
-                const user = pathParts[1];
-                const repo = pathParts[2];
-                const branch = pathParts[4];
-                const filePath = pathParts.slice(5).join('/');
-                return `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${filePath}`;
-            }
-        }
-        
-        // Convert GitHub Pages to raw if possible
+        // Handle GitHub Pages URL
         if (urlObj.hostname.endsWith('.github.io')) {
-            const parts = urlObj.hostname.split('.');
-            const user = parts[0];
-            const repo = urlObj.pathname.split('/')[1] || DIVINE_CONFIG.GITHUB_REPO;
-            const filePath = urlObj.pathname.split('/').slice(2).join('/');
-            return `https://raw.githubusercontent.com/${user}/${repo}/main/${filePath}`;
+            const hostParts = urlObj.hostname.split('.');
+            const username = hostParts[0];
+            
+            const pathParts = urlObj.pathname.split('/').filter(p => p);
+            const repo = pathParts[0] || DIVINE_CONFIG.GITHUB_REPO;
+            const filePath = pathParts.slice(1).join('/') || '';
+            
+            return `https://raw.githubusercontent.com/${username}/${repo}/main/${filePath}`;
         }
         
-        return url;
-    } catch {
-        return url;
-    }
-}
-
-function convertToGithubPagesUrl(url) {
-    try {
-        const urlObj = new URL(url);
+        // Handle GitHub blob URL
+        if (urlObj.hostname === 'github.com' && urlObj.pathname.includes('/blob/')) {
+            const path = urlObj.pathname.replace('/blob/', '/');
+            return `https://raw.githubusercontent.com${path}`;
+        }
         
-        // Convert raw GitHub to GitHub Pages
+        // Already a raw URL
         if (urlObj.hostname === 'raw.githubusercontent.com') {
-            const pathParts = urlObj.pathname.split('/');
-            const user = pathParts[1];
-            const repo = pathParts[2];
-            const filePath = pathParts.slice(4).join('/');
-            return `https://${user}.github.io/${repo}/${filePath}`;
-        }
-        
-        // Convert GitHub blob to GitHub Pages
-        if (urlObj.hostname === 'github.com') {
-            const pathParts = urlObj.pathname.split('/');
-            if (pathParts[2] === 'blob') {
-                const user = pathParts[1];
-                const repo = pathParts[2];
-                const filePath = pathParts.slice(5).join('/');
-                return `https://${user}.github.io/${repo}/${filePath}`;
-            }
+            return url;
         }
         
         return url;
-    } catch {
+    } catch (error) {
+        console.error('URL conversion error:', error);
         return url;
     }
 }
 
-async function validateGithubUrl(url) {
-    const validationResult = elements.githubValidationResult;
-    validationResult.className = 'validation-result';
-    validationResult.textContent = 'Validating URL...';
-    
-    try {
-        // Convert to raw URL for validation
-        const rawUrl = convertToRawGithubUrl(url);
-        
-        // Try to fetch the file
-        const response = await fetch(rawUrl, { method: 'HEAD' });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        // Check content type
-        const contentType = response.headers.get('content-type') || '';
-        const isGlb = contentType.includes('model/gltf-binary') || 
-                      rawUrl.toLowerCase().endsWith('.glb');
-        
-        if (!isGlb) {
-            throw new Error('URL does not point to a GLB file');
-        }
-        
-        // Success
-        validationResult.className = 'validation-result success';
-        validationResult.innerHTML = `
-            <i class="fas fa-check-circle"></i> 
-            Valid GLB file found!
-            <br><small>Content-Type: ${contentType}</small>
-        `;
-        
-        return { valid: true, rawUrl, contentType };
-        
-    } catch (error) {
-        validationResult.className = 'validation-result error';
-        validationResult.innerHTML = `
-            <i class="fas fa-times-circle"></i> 
-            Validation failed: ${error.message}
-        `;
-        return { valid: false, error: error.message };
-    }
-}
-
-async function addGithubModel() {
-    const name = elements.githubModelName.value.trim();
-    const url = elements.githubGlbUrl.value.trim();
-    const thumbnailUrl = elements.githubThumbnailUrl.value.trim();
-    const tags = elements.githubModelTags.value.split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag);
-    
-    if (!name || !url) {
-        showNotification('Please provide model name and GitHub URL', 'error');
-        return;
-    }
-    
-    // Validate URL
-    const validation = await validateGithubUrl(url);
-    if (!validation.valid) {
-        showNotification('Invalid GitHub URL', 'error');
-        return;
-    }
-    
-    try {
-        showUploadStatus(true);
-        updateProgress(30, 'Processing divine model...');
-        
-        // Convert to GitHub Pages URL if checkbox is checked
-        let finalUrl = url;
-        if (elements.convertToGhPages.checked) {
-            finalUrl = convertToGithubPagesUrl(url);
-        }
-        
-        // Create model object
-        const model = {
-            name,
-            type: 'github',
-            source: 'github',
-            glbUrl: finalUrl,
-            thumbnailUrl: thumbnailUrl || getDefaultThumbnail(name),
-            fileName: url.split('/').pop() || `${name.replace(/\s+/g, '_').toLowerCase()}.glb`,
-            uploadDate: new Date().toISOString(),
-            tags: ['github', 'divine', ...tags],
-            fileSize: 0,
-            description: `Divine model hosted on GitHub: ${name}`,
-            securitySignature: DIVINE_CONFIG.SECURITY_SIGNATURE
-        };
-        
-        updateProgress(70, 'Saving to cosmic database...');
-        
-        // Save to database
-        const modelId = await saveModel(model);
-        model.id = modelId;
-        
-        // Add to local arrays
-        allModels.unshift(model);
-        filteredModels.unshift(model);
-        
-        updateProgress(100, 'Model added successfully!');
-        
-        // Update UI
-        setTimeout(() => {
-            showUploadStatus(false);
-            updateModelCount(allModels.length);
-            renderModels(allModels, elements.modelsGrid, false);
-            
-            if (isDivineAdmin) {
-                renderModels(allModels, elements.adminModelsGrid, true);
-                if (elements.totalModelsCount) {
-                    elements.totalModelsCount.textContent = allModels.length;
-                }
-            }
-            
-            // Reset form
-            resetGithubForm();
-            
-            showNotification('Divine model added to cosmos!', 'success');
-        }, 1000);
-        
-    } catch (error) {
-        console.error('Failed to add GitHub model:', error);
-        showUploadStatus(false);
-        showNotification(`Failed to add model: ${error.message}`, 'error');
-    }
-}
-
-function getDefaultThumbnail(modelName) {
-    const thumbnails = {
-        'krishna': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
-        'buddha': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
-        'mandala': 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop',
-        'lotus': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
-        'shiva': 'https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop',
-        'hanuman': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
-        'ganesha': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
-        'meditation': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop'
-    };
-    
-    const lowerName = modelName.toLowerCase();
-    for (const [key, thumbnail] of Object.entries(thumbnails)) {
-        if (lowerName.includes(key)) {
-            return thumbnail;
-        }
-    }
-    
-    // Default cosmic thumbnail
-    return 'https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?w=400&h=300&fit=crop';
-}
-
 // ==============================
-// FILE UPLOAD HANDLING
+// DATABASE FUNCTIONS (for caching)
 // ==============================
 
-async function handleFileUpload() {
-    const name = elements.modelName.value.trim();
-    const thumbnailFile = elements.modelThumbnail.files[0];
-    const glbFile = elements.modelFile.files[0];
-    const tags = elements.modelTags.value.split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag);
-    const description = elements.modelDescription.value.trim();
-    
-    if (!name || !thumbnailFile || !glbFile) {
-        showNotification('Please fill all required fields', 'error');
-        return;
-    }
-    
-    // Mobile file size limit
-    if (isMobile && glbFile.size > 50 * 1024 * 1024) {
-        showNotification('File too large for mobile upload (max 50MB)', 'error');
-        return;
-    }
-    
-    try {
-        showUploadStatus(true);
-        updateProgress(10, 'Processing files...');
+function initDivineDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DIVINE_CONFIG.DB_NAME, DIVINE_CONFIG.DB_VERSION);
         
-        // Read thumbnail as Data URL
-        const thumbnail = await readFileAsDataURL(thumbnailFile);
-        
-        updateProgress(40, 'Reading GLB file...');
-        
-        // Read GLB file
-        const glbData = await readFileAsArrayBuffer(glbFile);
-        
-        updateProgress(70, 'Creating divine model...');
-        
-        // Create model object
-        const model = {
-            name,
-            type: 'upload',
-            source: 'upload',
-            thumbnail,
-            glbData: new Uint8Array(glbData),
-            fileName: `${name.replace(/\s+/g, '_').toLowerCase()}_divine.glb`,
-            uploadDate: new Date().toISOString(),
-            tags: ['uploaded', 'divine', 'local', ...tags],
-            fileSize: glbFile.size,
-            description: description || `Locally uploaded divine model: ${name}`,
-            securitySignature: DIVINE_CONFIG.SECURITY_SIGNATURE
+        request.onerror = () => {
+            console.error('IndexedDB error:', request.error);
+            reject(request.error);
         };
         
-        updateProgress(90, 'Saving to cosmic database...');
+        request.onsuccess = () => {
+            divineDB = request.result;
+            console.log('✅ Divine Database initialized');
+            resolve();
+        };
         
-        // Save to database
-        const modelId = await saveModel(model);
-        model.id = modelId;
-        
-        // Add to local arrays
-        allModels.unshift(model);
-        filteredModels.unshift(model);
-        
-        updateProgress(100, 'Upload complete!');
-        
-        // Update UI
-        setTimeout(() => {
-            showUploadStatus(false);
-            updateModelCount(allModels.length);
-            renderModels(allModels, elements.modelsGrid, false);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
             
-            if (isDivineAdmin) {
-                renderModels(allModels, elements.adminModelsGrid, true);
-                if (elements.totalModelsCount) {
-                    elements.totalModelsCount.textContent = allModels.length;
-                }
+            if (!db.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
+                const store = db.createObjectStore(DIVINE_CONFIG.STORE_NAME, {
+                    keyPath: 'id',
+                    autoIncrement: true
+                });
+                
+                store.createIndex('name', 'name', { unique: false });
+                store.createIndex('type', 'type', { unique: false });
+                store.createIndex('source', 'source', { unique: false });
+                store.createIndex('uploadDate', 'uploadDate', { unique: false });
+                store.createIndex('tags', 'tags', { multiEntry: true });
+                
+                console.log('✅ Created object store:', DIVINE_CONFIG.STORE_NAME);
             }
-            
-            // Reset form
-            resetUploadForm();
-            
-            showNotification('Divine model uploaded successfully!', 'success');
-        }, 1000);
+        };
         
-    } catch (error) {
-        console.error('Upload failed:', error);
-        showUploadStatus(false);
-        showNotification(`Upload failed: ${error.message}`, 'error');
-    }
-}
-
-function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => resolve(event.target.result);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-    });
-}
-
-function readFileAsArrayBuffer(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => resolve(event.target.result);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsArrayBuffer(file);
+        request.onblocked = () => {
+            console.warn('IndexedDB open blocked; close other tabs using site.');
+        };
     });
 }
 
@@ -1158,30 +858,6 @@ function showNotification(message, type = 'info') {
     });
 }
 
-function showUploadStatus(show) {
-    if (!elements.uploadStatus) return;
-    
-    if (show) {
-        elements.uploadStatus.style.display = 'block';
-        elements.uploadStatus.style.opacity = '1';
-    } else {
-        elements.uploadStatus.style.opacity = '0';
-        setTimeout(() => {
-            elements.uploadStatus.style.display = 'none';
-            elements.progressFill.style.width = '0%';
-            elements.statusPercent.textContent = '0%';
-        }, 300);
-    }
-}
-
-function updateProgress(percent, text) {
-    if (!elements.progressFill || !elements.statusText || !elements.statusPercent) return;
-    
-    elements.progressFill.style.width = `${percent}%`;
-    elements.statusText.textContent = text;
-    elements.statusPercent.textContent = `${percent}%`;
-}
-
 function updateModelCount(count) {
     // Update counter animation
     const counters = document.querySelectorAll('.cosmic-count[data-count]');
@@ -1193,51 +869,58 @@ function updateModelCount(count) {
 }
 
 function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0 || !bytes) return 'Unknown';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-function resetUploadForm() {
-    elements.modelName.value = '';
-    elements.modelThumbnail.value = '';
-    elements.modelFile.value = '';
-    elements.modelTags.value = '';
-    elements.modelDescription.value = '';
+function truncateUrl(url, maxLength) {
+    if (!url || url.length <= maxLength) return url || '';
     
-    const uploadAreas = document.querySelectorAll('.upload-area span');
-    uploadAreas.forEach(area => {
-        area.textContent = 'Drop or select file';
-    });
+    const start = url.substring(0, Math.floor(maxLength / 2) - 3);
+    const end = url.substring(url.length - Math.floor(maxLength / 2) + 3);
+    return start + '...' + end;
 }
 
-function resetGithubForm() {
-    elements.githubModelName.value = '';
-    elements.githubGlbUrl.value = '';
-    elements.githubThumbnailUrl.value = '';
-    elements.githubModelTags.value = '';
-    elements.githubValidationResult.className = 'validation-result';
-    elements.githubValidationResult.textContent = '';
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showNotification('URL copied to clipboard!', 'success');
+    } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('URL copied to clipboard!', 'success');
+    }
 }
 
-function switchPortal(portalId) {
-    // Update portal cards
-    elements.portalCards.forEach(card => {
-        card.classList.remove('active');
-        if (card.dataset.portal === portalId) {
-            card.classList.add('active');
-        }
-    });
+function getDefaultThumbnail(modelName) {
+    const thumbnails = {
+        'krishna': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
+        'buddha': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+        'mandala': 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop',
+        'lotus': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
+        'shiva': 'https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop',
+        'hanuman': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
+        'ganesha': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
+        'meditation': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop'
+    };
     
-    // Update portal contents
-    elements.portalContents.forEach(content => {
-        content.classList.remove('active');
-        if (content.id === `${portalId}Portal`) {
-            content.classList.add('active');
+    const lowerName = (modelName || '').toLowerCase();
+    for (const [key, thumbnail] of Object.entries(thumbnails)) {
+        if (lowerName.includes(key)) {
+            return thumbnail;
         }
-    });
+    }
+    
+    // Default cosmic thumbnail
+    return 'https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?w=400&h=300&fit=crop';
 }
 
 // ==============================
@@ -1245,18 +928,6 @@ function switchPortal(portalId) {
 // ==============================
 
 function setupEventListeners() {
-    // Admin Access
-    if (elements.adminAccessBtn) {
-        elements.adminAccessBtn.addEventListener('click', () => {
-            elements.adminLoginModal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-            
-            setTimeout(() => {
-                if (elements.adminPassword) elements.adminPassword.focus();
-            }, 100);
-        });
-    }
-    
     // Explore Button
     if (elements.exploreBtn) {
         elements.exploreBtn.addEventListener('click', () => {
@@ -1266,11 +937,19 @@ function setupEventListeners() {
         });
     }
     
-    // Request Manifestation
-    if (elements.requestManifestationBtn) {
-        elements.requestManifestationBtn.addEventListener('click', () => {
-            elements.adminLoginModal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
+    // Manual Refresh Button
+    if (elements.manualRefreshBtn) {
+        elements.manualRefreshBtn.addEventListener('click', async () => {
+            showNotification('Checking for updates...', 'info');
+            await loadModelsFromGitHub(true);
+        });
+    }
+    
+    // Retry Load Button
+    if (elements.retryLoadBtn) {
+        elements.retryLoadBtn.addEventListener('click', async () => {
+            showNotification('Retrying to load models...', 'info');
+            await loadModelsFromGitHub(true);
         });
     }
     
@@ -1281,7 +960,7 @@ function setupEventListeners() {
     
     // Close modal on outside click
     window.addEventListener('click', (e) => {
-        if (e.target === elements.adminLoginModal || e.target === elements.modelPreviewModal) {
+        if (e.target === elements.modelPreviewModal) {
             closeModal();
         }
     });
@@ -1293,73 +972,14 @@ function setupEventListeners() {
         }
     });
     
-    // Login
-    if (elements.loginBtn) {
-        elements.loginBtn.addEventListener('click', handleLogin);
-    }
-    
-    if (elements.adminPassword) {
-        elements.adminPassword.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleLogin();
-        });
-    }
-    
-    // Logout
-    if (elements.logoutBtn) {
-        elements.logoutBtn.addEventListener('click', handleLogout);
-    }
-    
-    // File Upload
-    if (elements.uploadBtn) {
-        elements.uploadBtn.addEventListener('click', handleFileUpload);
-    }
-    
-    // GitHub URL
-    if (elements.validateGithubUrlBtn) {
-        elements.validateGithubUrlBtn.addEventListener('click', () => {
-            const url = elements.githubGlbUrl.value.trim();
-            if (url) {
-                validateGithubUrl(url);
-            }
-        });
-    }
-    
-    if (elements.addGithubUrlBtn) {
-        elements.addGithubUrlBtn.addEventListener('click', addGithubModel);
-    }
-    
-    // Portal Navigation
-    elements.portalCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const portal = card.dataset.portal;
-            switchPortal(portal);
-        });
-    });
-    
-    // Model Search (Main)
+    // Model Search
     if (elements.searchModels) {
         elements.searchModels.addEventListener('input', (e) => {
             filterModels(e.target.value);
         });
     }
     
-    // Model Search (Admin)
-    if (elements.modelSearch) {
-        elements.modelSearch.addEventListener('input', (e) => {
-            filterModelsAdmin(e.target.value);
-        });
-    }
-    
-    // Filter Buttons (Admin)
-    elements.filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            elements.filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            filterModelsAdmin(elements.modelSearch.value, btn.dataset.filter);
-        });
-    });
-    
-    // Filter Tags (Main)
+    // Filter Tags
     elements.filterTags.forEach(btn => {
         btn.addEventListener('click', () => {
             elements.filterTags.forEach(b => b.classList.remove('active'));
@@ -1371,7 +991,7 @@ function setupEventListeners() {
     // Preview Modal Download
     if (elements.downloadPreviewBtn) {
         elements.downloadPreviewBtn.addEventListener('click', () => {
-            const modelId = parseInt(elements.downloadPreviewBtn.dataset.modelId);
+            const modelId = elements.downloadPreviewBtn.dataset.modelId;
             const model = allModels.find(m => m.id === modelId);
             if (model) {
                 downloadModel(model);
@@ -1404,126 +1024,9 @@ function setupEventListeners() {
     });
 }
 
-function setupDragAndDrop() {
-    const uploadAreas = document.querySelectorAll('.upload-area');
-    
-    uploadAreas.forEach(area => {
-        area.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            area.style.borderColor = 'var(--cosmic-primary)';
-            area.style.background = 'rgba(15, 15, 35, 0.8)';
-        });
-        
-        area.addEventListener('dragleave', () => {
-            area.style.borderColor = 'rgba(139, 92, 246, 0.3)';
-            area.style.background = 'rgba(15, 15, 35, 0.4)';
-        });
-        
-        area.addEventListener('drop', (e) => {
-            e.preventDefault();
-            area.style.borderColor = 'rgba(139, 92, 246, 0.3)';
-            area.style.background = 'rgba(15, 15, 35, 0.4)';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                const input = area.parentElement.querySelector('input[type="file"]');
-                if (input) {
-                    input.files = files;
-                    
-                    const fileName = files[0].name;
-                    area.querySelector('span').textContent = 
-                        fileName.substring(0, 20) + (fileName.length > 20 ? '...' : '');
-                    
-                    area.querySelector('i').className = 'fas fa-check-circle';
-                    area.querySelector('i').style.color = '#00ff88';
-                    
-                    setTimeout(() => {
-                        area.querySelector('i').className = 'fas fa-cloud-upload';
-                        area.querySelector('i').style.color = '';
-                        area.querySelector('span').textContent = 'Drop or select file';
-                    }, 3000);
-                }
-            }
-        });
-    });
-}
-
 function closeModal() {
-    elements.adminLoginModal.style.display = 'none';
     elements.modelPreviewModal.style.display = 'none';
     document.body.style.overflow = 'auto';
-    
-    resetLoginForm();
-}
-
-function resetLoginForm() {
-    elements.adminPassword.value = '';
-    elements.loginError.textContent = '';
-    elements.loginError.style.opacity = '0';
-}
-
-// ==============================
-// AUTHENTICATION
-// ==============================
-
-function handleLogin() {
-    const password = elements.adminPassword.value.trim();
-    
-    if (password === DIVINE_CONFIG.ADMIN_PASSWORD) {
-        isDivineAdmin = true;
-        
-        // Transition to admin panel
-        elements.adminLoginModal.style.opacity = '0';
-        setTimeout(() => {
-            elements.adminLoginModal.style.display = 'none';
-            elements.adminPanel.style.display = 'block';
-            elements.mainWebsite.style.display = 'none';
-            document.body.style.overflow = 'auto';
-            
-            // Load admin models
-            renderModels(allModels, elements.adminModelsGrid, true);
-            if (elements.totalModelsCount) {
-                elements.totalModelsCount.textContent = allModels.length;
-            }
-            
-            showNotification('Welcome to Divine Administration Portal', 'success');
-            
-            if (isMobile) {
-                document.body.classList.add('admin-mode');
-            }
-        }, 300);
-        
-        resetLoginForm();
-        
-    } else {
-        elements.loginError.textContent = 'Invalid cosmic passcode';
-        elements.loginError.style.opacity = '1';
-        
-        elements.adminPassword.style.animation = 'shake 0.5s';
-        setTimeout(() => {
-            elements.adminPassword.style.animation = '';
-        }, 500);
-    }
-}
-
-function handleLogout() {
-    isDivineAdmin = false;
-    
-    elements.adminPanel.style.opacity = '0';
-    setTimeout(() => {
-        elements.adminPanel.style.display = 'none';
-        elements.mainWebsite.style.display = 'block';
-        elements.adminPanel.style.opacity = '1';
-        
-        if (isMobile) {
-            document.body.classList.remove('admin-mode');
-        }
-        
-        showNotification('Returned to divine website', 'warning');
-    }, 300);
-    
-    resetUploadForm();
-    resetGithubForm();
 }
 
 // ==============================
@@ -1544,7 +1047,7 @@ function filterModels(searchTerm = '') {
         return matchesSearch;
     });
     
-    renderModels(filteredModels, elements.modelsGrid, false);
+    renderModels(filteredModels, elements.modelsGrid);
 }
 
 function filterModelsByTag(tag) {
@@ -1556,30 +1059,7 @@ function filterModelsByTag(tag) {
         );
     }
     
-    renderModels(filteredModels, elements.modelsGrid, false);
-}
-
-function filterModelsAdmin(searchTerm = '', filter = 'all') {
-    filteredModels = allModels.filter(model => {
-        // Search term filter
-        const matchesSearch = !searchTerm || 
-            model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (model.tags && model.tags.some(tag => 
-                tag.toLowerCase().includes(searchTerm.toLowerCase())
-            )) ||
-            (model.description && model.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (model.glbUrl && model.glbUrl.toLowerCase().includes(searchTerm.toLowerCase()));
-        
-        // Source filter
-        const matchesFilter = filter === 'all' || model.source === filter;
-        
-        return matchesSearch && matchesFilter;
-    });
-    
-    // Update admin grid
-    if (isDivineAdmin) {
-        renderModels(filteredModels, elements.adminModelsGrid, true);
-    }
+    renderModels(filteredModels, elements.modelsGrid);
 }
 
 // ==============================
@@ -1717,44 +1197,19 @@ function setupScrollAnimations() {
 
 async function updateDownloadCount(modelId) {
     try {
-        const model = allModels.find(m => m.id === modelId);
-        if (model) {
-            // Update download count in model
-            model.downloadCount = (model.downloadCount || 0) + 1;
-            
-            // Update in database
-            await updateModel(modelId, { downloadCount: model.downloadCount });
-            
-            // Update total download counter
-            const totalDownloads = allModels.reduce((sum, m) => sum + (m.downloadCount || 0), 0);
-            const downloadCounter = document.querySelector('.cosmic-count[data-count="0"]');
-            if (downloadCounter && downloadCounter.parentElement.querySelector('.stat-label').textContent.includes('Downloads')) {
-                downloadCounter.textContent = totalDownloads;
-            }
-            
-            // Update admin statistics
-            if (isDivineAdmin && elements.totalDownloads) {
-                elements.totalDownloads.textContent = totalDownloads;
-                
-                // Update today's downloads (simplified)
-                const today = new Date().toDateString();
-                const todayDownloads = allModels.reduce((sum, m) => {
-                    const lastDownload = m.lastDownload ? new Date(m.lastDownload).toDateString() : null;
-                    return sum + (lastDownload === today ? (m.downloadCount || 0) : 0);
-                }, 0);
-                if (elements.todayDownloads) {
-                    elements.todayDownloads.textContent = todayDownloads;
-                }
-                
-                // Update most popular model
-                const popular = allModels.reduce((max, m) => 
-                    (m.downloadCount || 0) > (max.downloadCount || 0) ? m : max
-                , allModels[0] || {});
-                if (elements.popularModel) {
-                    elements.popularModel.textContent = popular.name || 'None';
-                }
-            }
+        // Update download count in localStorage
+        let downloadStats = JSON.parse(localStorage.getItem('divine_download_stats') || '{}');
+        downloadStats.total = (downloadStats.total || 0) + 1;
+        downloadStats[modelId] = (downloadStats[modelId] || 0) + 1;
+        localStorage.setItem('divine_download_stats', JSON.stringify(downloadStats));
+        
+        // Update total download counter
+        const totalDownloads = downloadStats.total || 0;
+        const downloadCounter = document.querySelector('.cosmic-count[data-count="0"]');
+        if (downloadCounter && downloadCounter.parentElement.querySelector('.stat-label').textContent.includes('Downloads')) {
+            downloadCounter.textContent = totalDownloads;
         }
+        
     } catch (error) {
         console.error('Failed to update download count:', error);
     }
@@ -1766,164 +1221,12 @@ async function updateDownloadCount(modelId) {
 
 window.DivineCosmos = {
     config: DIVINE_CONFIG,
-    db: () => divineDB,
+    refreshState: () => refreshState,
     models: () => allModels,
-    isAdmin: () => isDivineAdmin,
     isMobile: () => isMobile,
-    reloadModels: loadAndRenderModels,
-    showNotification: showNotification
+    reloadModels: () => loadModelsFromGitHub(true),
+    showNotification: showNotification,
+    manualRefresh: () => loadModelsFromGitHub(true)
 };
-// ==============================
-// AUTOMATIC MODEL LOADER
-// ==============================
 
-async function autoLoadModels() {
-    try {
-        // Show loading
-        showLoading(true);
-        
-        // 1. Load models from models.json
-        const response = await fetch('models.json');
-        if (!response.ok) {
-            throw new Error(`Failed to load models.json`);
-        }
-        
-        const models = await response.json();
-        
-        // 2. Get container
-        const grid = document.getElementById('modelsGrid');
-        if (!grid) return;
-        
-        // 3. Clear loading/empty states
-        grid.innerHTML = '';
-        
-        // 4. Create and display each model card
-        models.forEach((model, index) => {
-            const card = document.createElement('div');
-            card.className = 'divine-card model-card fade-in-up';
-            card.style.animationDelay = `${index * 0.1}s`;
-            
-            // Default values
-            const thumbnail = model.thumbnailUrl || 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop';
-            const tags = model.tags || ['divine'];
-            const desc = model.description || 'Divine 3D Model';
-            const fileSize = model.fileSize ? formatFileSize(model.fileSize) : 'Unknown';
-            
-            card.innerHTML = `
-                <div class="model-preview">
-                    <img src="${thumbnail}" alt="${model.name}" loading="lazy">
-                    <div class="model-source-badge">
-                        <i class="fab fa-github"></i> Auto Loaded
-                    </div>
-                </div>
-                <div class="model-info">
-                    <h3 class="model-name">${model.name}</h3>
-                    <p class="model-description">${desc}</p>
-                    
-                    <div class="model-url-display">
-                        <i class="fas fa-link"></i>
-                        <span>${model.glbUrl.substring(0, 40)}...</span>
-                    </div>
-                    
-                    <div class="model-meta">
-                        <span class="meta-item">
-                            <i class="fas fa-tags"></i>
-                            ${tags.join(', ')}
-                        </span>
-                        <span class="meta-item">
-                            <i class="fas fa-weight"></i>
-                            ${fileSize}
-                        </span>
-                    </div>
-                </div>
-                <div class="model-actions">
-                    <a href="${model.glbUrl}" 
-                       download="${model.name.replace(/\s+/g, '_')}.glb" 
-                       class="divine-button cosmic-btn">
-                        <i class="fas fa-download"></i>
-                        Download GLB
-                    </a>
-                    <button class="divine-button outline-btn copy-url-btn" data-url="${model.glbUrl}">
-                        <i class="fas fa-copy"></i>
-                        Copy URL
-                    </button>
-                </div>
-            `;
-            
-            // Add click to copy URL
-            card.querySelector('.copy-url-btn').addEventListener('click', function() {
-                navigator.clipboard.writeText(model.glbUrl);
-                showNotification('URL copied to clipboard!', 'success');
-            });
-            
-            grid.appendChild(card);
-        });
-        
-        // 5. Update counter
-        updateModelCount(models.length);
-        
-        // 6. Hide loading
-        showLoading(false);
-        
-        showNotification(`Loaded ${models.length} divine models`, 'success');
-        
-    } catch (error) {
-        console.error('Auto-load failed:', error);
-        showNotification('Could not load models', 'error');
-        showLoading(false);
-    }
-}
-
-// Helper function
-function formatFileSize(bytes) {
-    if (!bytes) return 'Unknown';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-// Helper function to show/hide loading
-function showLoading(show) {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.style.display = show ? 'flex' : 'none';
-}
-
-// Helper function for notifications
-function showNotification(message, type = 'info') {
-    const container = document.getElementById('notificationContainer');
-    if (!container) return;
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i>
-            ${message}
-        </div>
-    `;
-    
-    container.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
-}
-
-// Helper function to update counter
-function updateModelCount(count) {
-    const counter = document.querySelector('.cosmic-count[data-count]');
-    if (counter) counter.textContent = count;
-}
-
-// ==============================
-// AUTOMATIC INITIALIZATION
-// ==============================
-
-// Add this at the VERY END of your script.js file (after all other code):
-document.addEventListener('DOMContentLoaded', () => {
-    // Remove or comment out ALL other initialization code
-    
-    // Add this single line:
-    autoLoadModels();
-});
 console.log('✨ Divine Cosmos Script Loaded Successfully!');
-
-
