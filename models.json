@@ -15,7 +15,7 @@
     "id": "test_model_2",
     "name": "Meditation Buddha",
     "description": "Peaceful Buddha statue",
-    "glbUrl": "https://raw.githubusercontent.com/shank122004-tech/DivineAppWeb/main/models/buddha.glb",
+    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/lord_sri_ram_in_the_forest.glb",
     "thumbnailUrl": "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop",
     "tags": ["buddha", "meditation", "peace"],
     "uploadDate": "2024-01-14",
@@ -24,3 +24,4 @@
     "downloadCount": 980
   }
 ]
+https://shank122004-tech.github.io/DivineAppWeb/models/lord_sri_ram_in_the_forest.glb
