@@ -24,7 +24,7 @@ const CONFIG = {
             description: 'Beautiful 3D model of Lord Krishna playing flute',
             category: 'Spiritual',
             tags: ['krishna', 'divine', 'statue', 'hindu'],
-            glbUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
             thumbnailUrl: 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
             fileSize: '4.5 MB',
             createdAt: '2024-01-15',
@@ -1425,3 +1425,4 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
+
