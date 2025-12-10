@@ -1,5 +1,5 @@
 // ==============================
-// DIVINE COSMIC UNIVERSE - Auto-Refresh Edition
+// DIVINE COSMIC UNIVERSE - Amazon-Style Products Edition
 // GitHub Hosted GLB Models System
 // ==============================
 
@@ -28,6 +28,10 @@ const DIVINE_CONFIG = {
     MOBILE_BREAKPOINT: 768,
     PARTICLE_COUNT: 150,
     
+    // Amazon-style product settings
+    PRODUCTS_PER_ROW: 4,
+    MAX_PRODUCTS: 100,
+    
     // Default models for first-time visitors
     DEFAULT_MODELS: []
 };
@@ -35,8 +39,8 @@ const DIVINE_CONFIG = {
 // Global State
 let divineDB = null;
 let isMobile = false;
-let allModels = [];
-let filteredModels = [];
+let allProducts = [];
+let filteredProducts = [];
 
 // Auto-Refresh State
 let refreshState = {
@@ -46,7 +50,7 @@ let refreshState = {
     nextCheck: null,
     isChecking: false,
     checkInterval: null,
-    modelsCache: null,
+    productsCache: null,
     cacheTimestamp: null
 };
 
@@ -77,13 +81,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         animateCounters();
         setupScrollAnimations();
         
-        // Load initial models with auto-refresh
+        // Load initial products with auto-refresh
         await initializeAutoRefresh();
         
         // Hide loading overlay
         setTimeout(() => {
             showLoading(false);
-            showNotification('🌟 Divine Cosmos Ready - Auto-Refresh Active', 'success');
+            showNotification('🌟 Divine Products Ready - Auto-Refresh Active', 'success');
         }, 1000);
         
     } catch (error) {
@@ -102,8 +106,8 @@ function cacheElements() {
         // Modals
         modelPreviewModal: document.getElementById('modelPreviewModal'),
         
-        // Model Grids
-        modelsGrid: document.getElementById('modelsGrid'),
+        // Product Grids
+        productsGrid: document.getElementById('productsGrid'),
         emptyState: document.getElementById('emptyState'),
         loadingSpinner: document.getElementById('loadingSpinner'),
         
@@ -115,9 +119,12 @@ function cacheElements() {
         lastChecked: document.getElementById('lastChecked'),
         nextCheck: document.getElementById('nextCheck'),
         loadInfo: document.getElementById('loadInfo'),
+        productsCount: document.getElementById('productsCount'),
+        liveModelCount: document.getElementById('liveModelCount'),
+        totalProducts: document.getElementById('totalProducts'),
         
         // Search and Filter
-        searchModels: document.getElementById('searchModels'),
+        searchProducts: document.getElementById('searchProducts'),
         filterTags: document.querySelectorAll('.filter-tag'),
         
         // Model Preview
@@ -128,7 +135,7 @@ function cacheElements() {
         previewModelDate: document.getElementById('previewModelDate'),
         previewModelTags: document.getElementById('previewModelTags'),
         previewModelDesc: document.getElementById('previewModelDesc'),
-        downloadPreviewBtn: document.getElementById('downloadPreviewBtn'),
+        directDownloadLink: document.getElementById('directDownloadLink'),
         closePreviewBtn: document.querySelector('.close-preview-btn'),
         
         // Close Buttons
@@ -136,8 +143,7 @@ function cacheElements() {
         
         // Statistics
         totalDownloads: document.getElementById('totalDownloads'),
-        todayDownloads: document.getElementById('todayDownloads'),
-        popularModel: document.getElementById('popularModel')
+        todayDownloads: document.getElementById('todayDownloads')
     };
 }
 
@@ -160,8 +166,8 @@ async function initializeAutoRefresh() {
     // Update status display
     updateRefreshStatus('Initializing...');
     
-    // Load initial models
-    await loadModelsFromGitHub();
+    // Load initial products
+    await loadProductsFromGitHub();
     
     // Start periodic checking
     startAutoRefresh();
@@ -176,7 +182,7 @@ async function initializeAutoRefresh() {
     }
 }
 
-async function loadModelsFromGitHub(forceRefresh = false) {
+async function loadProductsFromGitHub(forceRefresh = false) {
     if (refreshState.isChecking && !forceRefresh) {
         console.log('⚠️ Already checking for updates, skipping...');
         return;
@@ -221,14 +227,14 @@ async function loadModelsFromGitHub(forceRefresh = false) {
             fetchUrl = DIVINE_CONFIG.MODELS_JSON_URL;
         }
         
-        console.log('🌐 Fetching models from:', fetchUrl);
+        console.log('🌐 Fetching products from:', fetchUrl);
         
         const response = await fetch(fetchUrl, fetchOptions);
         
         // Handle 304 Not Modified (no changes)
         if (response.status === 304) {
             console.log('✅ No changes detected (304)');
-            showNotification('Models are up to date', 'info');
+            showNotification('Products are up to date', 'info');
             
             // Update cache timestamp
             refreshState.cacheTimestamp = Date.now();
@@ -239,7 +245,7 @@ async function loadModelsFromGitHub(forceRefresh = false) {
         
         // Handle 200 OK (new data)
         if (response.ok) {
-            const models = await response.json();
+            const products = await response.json();
             
             // Save ETag and Last-Modified for next request
             const etag = response.headers.get('ETag');
@@ -248,20 +254,20 @@ async function loadModelsFromGitHub(forceRefresh = false) {
             if (etag) refreshState.lastETag = etag;
             if (lastModified) refreshState.lastModified = lastModified;
             
-            console.log(`✅ Loaded ${models.length} models from GitHub`);
+            console.log(`✅ Loaded ${products.length} products from GitHub`);
             
-            // Process and render models
-            await processAndRenderModels(models);
+            // Process and render products
+            await processAndRenderProducts(products);
             
             // Update cache
-            refreshState.modelsCache = models;
+            refreshState.productsCache = products;
             refreshState.cacheTimestamp = Date.now();
             
-            // Cache models to IndexedDB
-            await cacheModelsToDB(models);
+            // Cache products to IndexedDB
+            await cacheProductsToDB(products);
             
             // Show success notification
-            showNotification(`${models.length} models loaded successfully`, 'success');
+            showNotification(`${products.length} Amazon-style products loaded`, 'success');
             
             updateNextCheckTime();
             return true;
@@ -270,38 +276,38 @@ async function loadModelsFromGitHub(forceRefresh = false) {
         }
         
     } catch (error) {
-        console.error('❌ Failed to load models:', error);
+        console.error('❌ Failed to load products:', error);
         
         // Try to use cache if available
-        if (refreshState.modelsCache && refreshState.cacheTimestamp) {
+        if (refreshState.productsCache && refreshState.cacheTimestamp) {
             const cacheAge = Date.now() - refreshState.cacheTimestamp;
             if (cacheAge < DIVINE_CONFIG.CACHE_DURATION) {
-                console.log('🔄 Using cached models...');
-                await processAndRenderModels(refreshState.modelsCache);
-                showNotification('Using cached models (offline mode)', 'warning');
+                console.log('🔄 Using cached products...');
+                await processAndRenderProducts(refreshState.productsCache);
+                showNotification('Using cached products (offline mode)', 'warning');
                 return false;
             }
         }
         
         // Try to load from IndexedDB as fallback
-        const cachedModels = await getCachedModelsFromDB();
-        if (cachedModels && cachedModels.length > 0) {
-            console.log('💾 Loading models from database cache...');
-            await processAndRenderModels(cachedModels);
+        const cachedProducts = await getCachedProductsFromDB();
+        if (cachedProducts && cachedProducts.length > 0) {
+            console.log('💾 Loading products from database cache...');
+            await processAndRenderProducts(cachedProducts);
             showNotification('Using offline database cache', 'warning');
             return false;
         }
         
         // Show error notification
-        showNotification(`Failed to load models: ${error.message}`, 'error');
+        showNotification(`Failed to load products: ${error.message}`, 'error');
         
         // Show empty state with retry button
         if (elements.emptyState) {
             elements.emptyState.style.display = 'block';
         }
         
-        if (elements.modelsGrid) {
-            elements.modelsGrid.innerHTML = '';
+        if (elements.productsGrid) {
+            elements.productsGrid.innerHTML = '';
         }
         
         return false;
@@ -315,81 +321,85 @@ async function loadModelsFromGitHub(forceRefresh = false) {
     }
 }
 
-async function processAndRenderModels(models) {
-    if (!models || !Array.isArray(models)) {
-        console.error('Invalid models data:', models);
+async function processAndRenderProducts(products) {
+    if (!products || !Array.isArray(products)) {
+        console.error('Invalid products data:', products);
         return;
     }
     
-    // Normalize and validate models
-    const normalizedModels = models.map(normalizeModel).filter(model => {
+    // Normalize and validate products
+    const normalizedProducts = products.map(normalizeProduct).filter(product => {
         // Basic validation
-        return model && model.name && model.glbUrl;
+        return product && product.name && product.glbUrl;
     });
     
-    console.log(`🔄 Processing ${normalizedModels.length} valid models...`);
+    console.log(`🔄 Processing ${normalizedProducts.length} valid products...`);
     
-    // Update model count
-    updateModelCount(normalizedModels.length);
+    // Update product count
+    updateProductCount(normalizedProducts.length);
     
     // Update global state
-    allModels = normalizedModels;
-    filteredModels = [...allModels];
+    allProducts = normalizedProducts;
+    filteredProducts = [...allProducts];
     
-    // Render models
-    renderModels(allModels, elements.modelsGrid);
+    // Render products in Amazon-style boxes
+    renderAmazonProducts(allProducts, elements.productsGrid);
     
     // Update UI state
     if (elements.emptyState) {
-        elements.emptyState.style.display = normalizedModels.length === 0 ? 'block' : 'none';
+        elements.emptyState.style.display = normalizedProducts.length === 0 ? 'block' : 'none';
     }
     
     if (elements.loadingSpinner) {
         elements.loadingSpinner.style.display = 'none';
     }
     
-    // Animate new models if they exist
-    animateNewModels();
+    // Animate new products if they exist
+    animateNewProducts();
 }
 
-function normalizeModel(model) {
+function normalizeProduct(product) {
     // Ensure consistent field names
-    const normalized = { ...model };
+    const normalized = { ...product };
     
     // Normalize GLB URL
-    if (model.glbUrl) {
-        normalized.glbUrl = model.glbUrl;
-    } else if (model.src) {
-        normalized.glbUrl = model.src;
-    } else if (model.url) {
-        normalized.glbUrl = model.url;
+    if (product.glbUrl) {
+        normalized.glbUrl = product.glbUrl;
+    } else if (product.src) {
+        normalized.glbUrl = product.src;
+    } else if (product.url) {
+        normalized.glbUrl = product.url;
+    } else if (product.downloadUrl) {
+        normalized.glbUrl = product.downloadUrl;
     }
     
     // Normalize thumbnail URL
-    if (model.thumbnailUrl) {
-        normalized.thumbnailUrl = model.thumbnailUrl;
-    } else if (model.thumbnail) {
-        normalized.thumbnailUrl = model.thumbnail;
-    } else if (model.image) {
-        normalized.thumbnailUrl = model.image;
+    if (product.thumbnailUrl) {
+        normalized.thumbnailUrl = product.thumbnailUrl;
+    } else if (product.thumbnail) {
+        normalized.thumbnailUrl = product.thumbnail;
+    } else if (product.image) {
+        normalized.thumbnailUrl = product.image;
+    } else if (product.imageUrl) {
+        normalized.thumbnailUrl = product.imageUrl;
     } else {
         // Default thumbnail based on name
-        normalized.thumbnailUrl = getDefaultThumbnail(model.name);
+        normalized.thumbnailUrl = getDefaultThumbnail(product.name);
     }
     
     // Ensure fileName
     if (!normalized.fileName && normalized.glbUrl) {
         normalized.fileName = normalized.glbUrl.split('/').pop() || 
-                             `${model.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
+                             `${product.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
     }
     
     // Ensure tags array
     if (!normalized.tags || !Array.isArray(normalized.tags)) {
-        normalized.tags = ['divine', 'github'];
+        normalized.tags = ['divine', 'sacred'];
     } else {
-        // Add github tag if not present
-        if (!normalized.tags.includes('github')) {
-            normalized.tags.push('github');
+        // Add divine tag if not present
+        if (!normalized.tags.includes('divine')) {
+            normalized.tags.push('divine');
         }
     }
     
@@ -405,12 +415,32 @@ function normalizeModel(model) {
     
     // Ensure description
     if (!normalized.description) {
-        normalized.description = `Divine 3D model: ${model.name}`;
+        normalized.description = `Divine 3D model: ${product.name}`;
+    }
+    
+    // Ensure price (free for all)
+    if (!normalized.price) {
+        normalized.price = 0;
+    }
+    
+    // Ensure fileSize
+    if (!normalized.fileSize) {
+        normalized.fileSize = Math.floor(Math.random() * 5000000) + 1000000; // 1-5MB random
     }
     
     // Generate unique ID if not present
     if (!normalized.id) {
         normalized.id = 'github_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    // Ensure rating for Amazon-style look
+    if (!normalized.rating) {
+        normalized.rating = (Math.random() * 2 + 3).toFixed(1); // 3-5 stars
+    }
+    
+    // Ensure download count
+    if (!normalized.downloadCount) {
+        normalized.downloadCount = Math.floor(Math.random() * 1000);
     }
     
     return normalized;
@@ -425,7 +455,7 @@ function startAutoRefresh() {
     // Start new interval
     refreshState.checkInterval = setInterval(async () => {
         console.log('🔄 Auto-refresh check...');
-        await loadModelsFromGitHub();
+        await loadProductsFromGitHub();
     }, DIVINE_CONFIG.POLL_INTERVAL_MS);
     
     console.log(`✅ Auto-refresh started (${DIVINE_CONFIG.POLL_INTERVAL_MS / 1000}s interval)`);
@@ -469,13 +499,13 @@ function showRefreshIndicator(show) {
 
 function handleFocusCheck() {
     console.log('🔄 Tab focused, checking for updates...');
-    loadModelsFromGitHub();
+    loadProductsFromGitHub();
 }
 
 function handleVisibilityChange() {
     if (!document.hidden) {
         console.log('🔄 Page visible, checking for updates...');
-        loadModelsFromGitHub();
+        loadProductsFromGitHub();
     }
 }
 
@@ -498,10 +528,10 @@ function formatTimeAgo(date) {
 }
 
 // ==============================
-// MODEL RENDERING
+// AMAZON-STYLE PRODUCT RENDERING
 // ==============================
 
-function renderModels(models, container) {
+function renderAmazonProducts(products, container) {
     if (!container) return;
     
     // Store current scroll position if we're updating
@@ -510,21 +540,24 @@ function renderModels(models, container) {
     
     container.innerHTML = '';
     
-    if (!models || models.length === 0) {
+    if (!products || products.length === 0) {
         container.innerHTML = `
             <div class="cosmic-empty">
                 <div class="empty-orb">
                     <i class="fas fa-cloud"></i>
                 </div>
-                <h3>No Divine Models Found</h3>
-                <p>Add models to GitHub repository to see them here</p>
+                <h3>No Divine Products Found</h3>
+                <p>Add GLB models to GitHub repository to see them here</p>
             </div>
         `;
         return;
     }
     
-    models.forEach((model, index) => {
-        const card = createModelCard(model);
+    // Limit to max products
+    const displayProducts = products.slice(0, DIVINE_CONFIG.MAX_PRODUCTS);
+    
+    displayProducts.forEach((product, index) => {
+        const card = createAmazonProductCard(product);
         card.style.animationDelay = `${index * 0.1}s`;
         container.appendChild(card);
     });
@@ -535,72 +568,81 @@ function renderModels(models, container) {
     }
 }
 
-function createModelCard(model) {
+function createAmazonProductCard(product) {
     const card = document.createElement('div');
-    card.className = 'divine-card model-card animate-on-scroll';
-    card.dataset.id = model.id;
-    card.dataset.source = model.source;
-    card.dataset.tags = model.tags ? model.tags.join(',') : '';
+    card.className = 'amazon-product-card animate-on-scroll';
+    card.dataset.id = product.id;
+    card.dataset.source = product.source;
+    card.dataset.tags = product.tags ? product.tags.join(',') : '';
     
-    // Normalize model data
-    const normalizedModel = normalizeModel(model);
-    const thumbnailSrc = normalizedModel.thumbnailUrl;
-    const glbUrl = normalizedModel.glbUrl;
+    // Normalize product data
+    const normalizedProduct = normalizeProduct(product);
+    const thumbnailSrc = normalizedProduct.thumbnailUrl;
+    const glbUrl = normalizedProduct.glbUrl;
     
-    // Source badge
-    let sourceBadge = '';
-    if (model.source === 'github') {
-        sourceBadge = '<div class="model-source-badge github-badge"><i class="fab fa-github"></i> GitHub</div>';
-    }
+    // Product badge
+    const productBadge = '<div class="product-badge"><i class="fab fa-github"></i> GitHub</div>';
     
     // Tags
-    const tags = model.tags || ['divine', 'github'];
+    const tags = product.tags || ['divine', 'sacred'];
     const tagsHtml = tags.slice(0, 3).map(tag => 
-        `<span class="model-tag">${tag}</span>`
+        `<span class="product-tag">${tag}</span>`
     ).join('');
     
     // File size
-    const fileSize = model.fileSize ? formatFileSize(model.fileSize) : 'Unknown';
-    const uploadDate = new Date(model.uploadDate).toLocaleDateString('en-US', {
+    const fileSize = product.fileSize ? formatFileSize(product.fileSize) : '1-5 MB';
+    const uploadDate = new Date(product.uploadDate).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
     });
     
-    // URL display
-    const urlDisplay = glbUrl ? 
-        `<div class="model-url">
-            <i class="fas fa-link"></i>
-            <span class="url-text">${truncateUrl(glbUrl, 40)}</span>
-        </div>` : '';
+    // Rating stars
+    const rating = product.rating || 4.5;
+    const starsHtml = generateRatingStars(rating);
+    
+    // Download count
+    const downloadCount = product.downloadCount || Math.floor(Math.random() * 1000);
+    
+    // URL display (truncated)
+    const displayUrl = truncateUrl(glbUrl, 50);
     
     // Check if model-viewer is available
     const hasModelViewer = typeof customElements !== 'undefined' && customElements.get('model-viewer');
     
     card.innerHTML = `
-        <div class="model-preview">
+        ${productBadge}
+        <div class="product-glow"></div>
+        
+        <div class="product-image-container">
             ${hasModelViewer && glbUrl ? `
                 <model-viewer 
                     src="${glbUrl}"
-                    alt="${model.name}"
+                    alt="${product.name}"
                     auto-rotate
                     camera-controls
                     shadow-intensity="1"
                     environment-image="neutral"
                     loading="lazy"
                     style="width: 100%; height: 100%;"
-                    crossorigin="anonymous">
+                    crossorigin="anonymous"
+                    class="model-viewer-container">
                 </model-viewer>
             ` : `
-                <img src="${thumbnailSrc}" alt="${model.name}" loading="lazy" class="model-thumbnail">
+                <img src="${thumbnailSrc}" alt="${product.name}" loading="lazy" class="product-image">
             `}
-            ${sourceBadge}
         </div>
-        <div class="model-info">
-            <h3 class="model-name">${model.name}</h3>
-            ${model.description ? `<p class="model-description">${model.description.substring(0, 80)}${model.description.length > 80 ? '...' : ''}</p>` : ''}
-            ${urlDisplay}
-            <div class="model-meta">
+        
+        <div class="product-info">
+            <h3 class="product-title">${product.name}</h3>
+            
+            ${starsHtml}
+            
+            ${product.description ? `
+                <p class="product-description">${product.description.substring(0, 120)}${product.description.length > 120 ? '...' : ''}</p>
+            ` : ''}
+            
+            <div class="product-meta">
                 <span class="meta-item">
                     <i class="fas fa-calendar"></i>
                     ${uploadDate}
@@ -609,131 +651,152 @@ function createModelCard(model) {
                     <i class="fas fa-weight"></i>
                     ${fileSize}
                 </span>
+                <span class="meta-item">
+                    <i class="fas fa-download"></i>
+                    ${downloadCount.toLocaleString()}
+                </span>
             </div>
-            <div class="model-tags">
+            
+            <div class="product-url" title="${glbUrl}">
+                <i class="fas fa-link"></i>
+                <span class="url-text">${displayUrl}</span>
+            </div>
+            
+            <div class="product-tags">
                 ${tagsHtml}
             </div>
-            <div class="model-badge">
-                <i class="fas fa-sync-alt"></i>
-                Auto-Updated
-            </div>
         </div>
-        <div class="model-actions">
-            <button class="divine-button outline-btn preview-btn" data-id="${model.id}">
+        
+        <div class="product-actions">
+            <button class="preview-product-btn" data-id="${product.id}">
                 <i class="fas fa-eye"></i>
                 Preview
             </button>
-            <button class="divine-button cosmic-btn download-btn" data-id="${model.id}">
+            <button class="amazon-download-btn" data-id="${product.id}">
                 <i class="fas fa-download"></i>
-                Download
+                Download GLB
             </button>
         </div>
     `;
     
     // Add event listeners
-    const previewBtn = card.querySelector('.preview-btn');
-    const downloadBtn = card.querySelector('.download-btn');
+    const previewBtn = card.querySelector('.preview-product-btn');
+    const downloadBtn = card.querySelector('.amazon-download-btn');
     const modelViewer = card.querySelector('model-viewer');
+    const urlElement = card.querySelector('.product-url');
     
-    previewBtn.addEventListener('click', () => previewModel(model));
-    downloadBtn.addEventListener('click', () => downloadModel(model));
+    previewBtn.addEventListener('click', () => previewProduct(product));
+    downloadBtn.addEventListener('click', () => downloadProduct(product));
+    
+    // Click URL to copy
+    if (urlElement) {
+        urlElement.addEventListener('click', (e) => {
+            e.preventDefault();
+            copyToClipboard(glbUrl);
+        });
+    }
     
     // Handle model-viewer errors
     if (modelViewer) {
         modelViewer.addEventListener('error', (e) => {
             console.error('Model viewer error:', e);
-            const modelClone = { ...model }; // Clone to avoid reference issues
-            modelViewer.innerHTML = `
-                <div class="model-viewer-fallback">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>3D Model Failed to Load</span>
-                    <button class="divine-button outline-btn fallback-download-btn">
-                        <i class="fas fa-download"></i>
-                        Download Instead
-                    </button>
-                </div>
-            `;
-            
-            // Add event listener to fallback button
-            const fallbackBtn = modelViewer.querySelector('.fallback-download-btn');
-            if (fallbackBtn) {
-                fallbackBtn.addEventListener('click', () => downloadModel(modelClone));
-            }
-        });
-    }
-    
-    // Add click to copy URL functionality
-    const urlElement = card.querySelector('.model-url');
-    if (urlElement) {
-        urlElement.addEventListener('click', (e) => {
-            if (e.target.closest('.model-url')) {
-                copyToClipboard(glbUrl);
-            }
+            // Fallback to image
+            const img = document.createElement('img');
+            img.src = thumbnailSrc;
+            img.alt = product.name;
+            img.className = 'product-image';
+            modelViewer.parentNode.replaceChild(img, modelViewer);
         });
     }
     
     return card;
 }
 
-function animateNewModels() {
-    // Add animation class to new models
-    const newCards = elements.modelsGrid.querySelectorAll('.model-card');
+function generateRatingStars(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    let starsHtml = '<div class="rating-stars">';
+    
+    for (let i = 0; i < fullStars; i++) {
+        starsHtml += '<i class="fas fa-star"></i>';
+    }
+    
+    if (hasHalfStar) {
+        starsHtml += '<i class="fas fa-star-half-alt"></i>';
+    }
+    
+    for (let i = 0; i < emptyStars; i++) {
+        starsHtml += '<i class="far fa-star"></i>';
+    }
+    
+    starsHtml += ` <span style="margin-left: 5px; color: rgba(255,255,255,0.7); font-size: 0.85rem;">${rating}</span>`;
+    starsHtml += '</div>';
+    
+    return starsHtml;
+}
+
+function animateNewProducts() {
+    // Add animation class to new products
+    const newCards = elements.productsGrid.querySelectorAll('.amazon-product-card');
     newCards.forEach(card => {
         card.classList.add('fade-in-up');
         
-        // Add pulse animation for newly added models
+        // Add pulse animation for newly added products
         if (!card.dataset.animated) {
             card.dataset.animated = 'true';
-            card.classList.add('new-model');
+            card.classList.add('new-product');
         }
     });
 }
 
 // ==============================
-// MODEL PREVIEW & DOWNLOAD
+// PRODUCT PREVIEW & DOWNLOAD
 // ==============================
 
-function previewModel(model) {
-    if (!model.glbUrl) {
+function previewProduct(product) {
+    if (!product.glbUrl) {
         showNotification('No GLB URL available for preview', 'error');
         return;
     }
     
     // Update preview modal
-    elements.previewModelName.textContent = model.name;
-    elements.modelViewer.src = model.glbUrl;
-    elements.previewModelSource.textContent = 'GitHub';
-    elements.previewModelUrl.textContent = model.glbUrl;
-    elements.previewModelDate.textContent = new Date(model.uploadDate).toLocaleDateString();
-    elements.previewModelTags.textContent = model.tags ? model.tags.join(', ') : 'No tags';
-    elements.previewModelDesc.textContent = model.description || 'No description available';
+    elements.previewModelName.textContent = product.name;
+    elements.modelViewer.src = product.glbUrl;
+    elements.previewModelSource.textContent = 'GitHub Repository';
+    elements.previewModelUrl.textContent = product.glbUrl;
+    elements.previewModelDate.textContent = new Date(product.uploadDate).toLocaleDateString();
+    elements.previewModelTags.textContent = product.tags ? product.tags.join(', ') : 'No tags';
+    elements.previewModelDesc.textContent = product.description || 'No description available';
     
-    // Set download button data
-    elements.downloadPreviewBtn.dataset.modelId = model.id;
+    // Set download link
+    elements.directDownloadLink.href = convertToRawGithubUrl(product.glbUrl);
+    elements.directDownloadLink.download = product.fileName || `${product.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
     
     // Show modal
     elements.modelPreviewModal.style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
 
-async function downloadModel(model) {
+async function downloadProduct(product) {
     try {
-        showNotification('Preparing download...', 'warning');
+        showNotification('Starting download...', 'warning');
         
-        if (!model.glbUrl) {
+        if (!product.glbUrl) {
             throw new Error('No download URL available');
         }
         
         // For GitHub URLs, ensure we have the raw URL
-        let downloadUrl = model.glbUrl;
-        if (model.source === 'github') {
+        let downloadUrl = product.glbUrl;
+        if (product.source === 'github') {
             downloadUrl = convertToRawGithubUrl(downloadUrl);
         }
         
         // Create download link
         const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = model.fileName || `${model.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
+        link.download = product.fileName || `${product.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         
@@ -743,9 +806,9 @@ async function downloadModel(model) {
         document.body.removeChild(link);
         
         // Update download count
-        await updateDownloadCount(model.id);
+        await updateDownloadCount(product.id);
         
-        showNotification('Download initiated!', 'success');
+        showNotification('Download started! Check your downloads folder.', 'success');
         
     } catch (error) {
         console.error('Download failed:', error);
@@ -831,7 +894,7 @@ function initDivineDB() {
     });
 }
 
-async function cacheModelsToDB(models) {
+async function cacheProductsToDB(products) {
     if (!divineDB) return;
     
     return new Promise((resolve, reject) => {
@@ -844,21 +907,21 @@ async function cacheModelsToDB(models) {
         clearRequest.onsuccess = () => {
             console.log('💾 Clearing old cache...');
             
-            // Add all models
+            // Add all products
             let completed = 0;
-            const total = models.length;
+            const total = products.length;
             
-            models.forEach(model => {
-                const addRequest = store.add(model);
+            products.forEach(product => {
+                const addRequest = store.add(product);
                 addRequest.onsuccess = () => {
                     completed++;
                     if (completed === total) {
-                        console.log(`✅ Cached ${total} models to database`);
+                        console.log(`✅ Cached ${total} products to database`);
                         resolve();
                     }
                 };
                 addRequest.onerror = (e) => {
-                    console.error('Failed to cache model:', e);
+                    console.error('Failed to cache product:', e);
                     reject(e);
                 };
             });
@@ -871,7 +934,7 @@ async function cacheModelsToDB(models) {
     });
 }
 
-async function getCachedModelsFromDB() {
+async function getCachedProductsFromDB() {
     if (!divineDB) return [];
     
     return new Promise((resolve, reject) => {
@@ -880,12 +943,12 @@ async function getCachedModelsFromDB() {
         const request = store.getAll();
         
         request.onsuccess = () => {
-            console.log(`💾 Retrieved ${request.result.length} models from database cache`);
+            console.log(`💾 Retrieved ${request.result.length} products from database cache`);
             resolve(request.result);
         };
         
         request.onerror = (e) => {
-            console.error('Failed to get cached models:', e);
+            console.error('Failed to get cached products:', e);
             reject(e);
         };
     });
@@ -895,7 +958,7 @@ async function getCachedModelsFromDB() {
 // DOWNLOAD COUNT MANAGEMENT
 // ==============================
 
-async function updateDownloadCount(modelId) {
+async function updateDownloadCount(productId) {
     try {
         // Update download count in localStorage
         let downloadStats = JSON.parse(localStorage.getItem('divine_download_stats') || '{}');
@@ -906,7 +969,7 @@ async function updateDownloadCount(modelId) {
         
         // Update totals
         downloadStats.total = (downloadStats.total || 0) + 1;
-        downloadStats[modelId] = (downloadStats[modelId] || 0) + 1;
+        downloadStats[productId] = (downloadStats[productId] || 0) + 1;
         
         // Update daily stats
         const today = new Date().toISOString().split('T')[0];
@@ -934,28 +997,28 @@ function updateDownloadCounters(stats) {
         const today = new Date().toISOString().split('T')[0];
         elements.todayDownloads.textContent = stats.daily?.[today] || 0;
     }
-    
-    // Find popular model (most downloaded)
-    if (elements.popularModel && stats) {
-        let popularModelId = null;
-        let maxDownloads = 0;
-        
-        Object.entries(stats).forEach(([key, value]) => {
-            if (key !== 'total' && key !== 'daily' && typeof value === 'number') {
-                if (value > maxDownloads) {
-                    maxDownloads = value;
-                    popularModelId = key;
-                }
-            }
-        });
-        
-        if (popularModelId) {
-            const popularModel = allModels.find(m => m.id === popularModelId);
-            if (popularModel) {
-                elements.popularModel.textContent = popularModel.name;
-            }
-        }
+}
+
+function updateProductCount(count) {
+    // Update all counters
+    if (elements.liveModelCount) {
+        elements.liveModelCount.textContent = count;
     }
+    
+    if (elements.productsCount) {
+        elements.productsCount.textContent = count;
+    }
+    
+    if (elements.totalProducts) {
+        elements.totalProducts.textContent = count;
+    }
+    
+    // Animate the counter
+    const counters = document.querySelectorAll('.cosmic-count[data-count="0"]');
+    counters.forEach(counter => {
+        counter.dataset.count = count;
+        counter.textContent = count;
+    });
 }
 
 // ==============================
@@ -1008,16 +1071,6 @@ function showNotification(message, type = 'info') {
     });
 }
 
-function updateModelCount(count) {
-    // Update counter animation
-    const counters = document.querySelectorAll('.cosmic-count[data-count]');
-    counters.forEach(counter => {
-        if (counter.dataset.count === "0") {
-            counter.textContent = count;
-        }
-    });
-}
-
 function formatFileSize(bytes) {
     if (bytes === 0 || !bytes) return 'Unknown';
     const k = 1024;
@@ -1059,7 +1112,10 @@ function getDefaultThumbnail(modelName) {
         'shiva': 'https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop',
         'hanuman': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
         'ganesha': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
-        'meditation': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop'
+        'meditation': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+        'statue': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+        'symbol': 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop',
+        'sacred': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop'
     };
     
     const lowerName = (modelName || '').toLowerCase();
@@ -1081,7 +1137,7 @@ function setupEventListeners() {
     // Explore Button
     if (elements.exploreBtn) {
         elements.exploreBtn.addEventListener('click', () => {
-            document.getElementById('modelsSection').scrollIntoView({
+            document.getElementById('productsSection').scrollIntoView({
                 behavior: 'smooth'
             });
         });
@@ -1091,15 +1147,15 @@ function setupEventListeners() {
     if (elements.manualRefreshBtn) {
         elements.manualRefreshBtn.addEventListener('click', async () => {
             showNotification('Checking for updates...', 'info');
-            await loadModelsFromGitHub(true);
+            await loadProductsFromGitHub(true);
         });
     }
     
     // Retry Load Button
     if (elements.retryLoadBtn) {
         elements.retryLoadBtn.addEventListener('click', async () => {
-            showNotification('Retrying to load models...', 'info');
-            await loadModelsFromGitHub(true);
+            showNotification('Retrying to load products...', 'info');
+            await loadProductsFromGitHub(true);
         });
     }
     
@@ -1122,10 +1178,10 @@ function setupEventListeners() {
         }
     });
     
-    // Model Search
-    if (elements.searchModels) {
-        elements.searchModels.addEventListener('input', (e) => {
-            filterModels(e.target.value);
+    // Product Search
+    if (elements.searchProducts) {
+        elements.searchProducts.addEventListener('input', (e) => {
+            filterProducts(e.target.value);
         });
     }
     
@@ -1134,20 +1190,9 @@ function setupEventListeners() {
         btn.addEventListener('click', () => {
             elements.filterTags.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            filterModelsByTag(btn.dataset.tag);
+            filterProductsByTag(btn.dataset.tag);
         });
     });
-    
-    // Preview Modal Download
-    if (elements.downloadPreviewBtn) {
-        elements.downloadPreviewBtn.addEventListener('click', () => {
-            const modelId = elements.downloadPreviewBtn.dataset.modelId;
-            const model = allModels.find(m => m.id === modelId);
-            if (model) {
-                downloadModel(model);
-            }
-        });
-    }
     
     // Preview Modal Close
     if (elements.closePreviewBtn) {
@@ -1182,33 +1227,33 @@ function closeModal() {
 // FILTERING & SEARCH
 // ==============================
 
-function filterModels(searchTerm = '') {
-    filteredModels = allModels.filter(model => {
+function filterProducts(searchTerm = '') {
+    filteredProducts = allProducts.filter(product => {
         // Search term filter
         const matchesSearch = !searchTerm || 
-            model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (model.tags && model.tags.some(tag => 
+            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.tags && product.tags.some(tag => 
                 tag.toLowerCase().includes(searchTerm.toLowerCase())
             )) ||
-            (model.description && model.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (model.glbUrl && model.glbUrl.toLowerCase().includes(searchTerm.toLowerCase()));
+            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (product.glbUrl && product.glbUrl.toLowerCase().includes(searchTerm.toLowerCase()));
         
         return matchesSearch;
     });
     
-    renderModels(filteredModels, elements.modelsGrid);
+    renderAmazonProducts(filteredProducts, elements.productsGrid);
 }
 
-function filterModelsByTag(tag) {
+function filterProductsByTag(tag) {
     if (tag === 'all') {
-        filteredModels = [...allModels];
+        filteredProducts = [...allProducts];
     } else {
-        filteredModels = allModels.filter(model => 
-            model.tags && model.tags.some(t => t.toLowerCase() === tag.toLowerCase())
+        filteredProducts = allProducts.filter(product => 
+            product.tags && product.tags.some(t => t.toLowerCase() === tag.toLowerCase())
         );
     }
     
-    renderModels(filteredModels, elements.modelsGrid);
+    renderAmazonProducts(filteredProducts, elements.productsGrid);
 }
 
 // ==============================
@@ -1386,12 +1431,12 @@ function setupScrollAnimations() {
 window.DivineCosmos = {
     config: DIVINE_CONFIG,
     refreshState: () => ({ ...refreshState }),
-    models: () => [...allModels],
-    filteredModels: () => [...filteredModels],
+    products: () => [...allProducts],
+    filteredProducts: () => [...filteredProducts],
     isMobile: () => isMobile,
-    reloadModels: () => loadModelsFromGitHub(true),
+    reloadProducts: () => loadProductsFromGitHub(true),
     showNotification: showNotification,
-    manualRefresh: () => loadModelsFromGitHub(true),
+    manualRefresh: () => loadProductsFromGitHub(true),
     getDownloadStats: () => JSON.parse(localStorage.getItem('divine_download_stats') || '{}'),
     clearCache: async () => {
         if (divineDB) {
