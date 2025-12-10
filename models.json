@@ -8,3 +8,15 @@
     "uploadDate": "2025-12-10T12:00:00.000Z"
   }
 ]
+{
+  "id": 6,
+  "name": "Lord Sri Ram in the Forest",
+  "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/lord_sri_ram_in_the_forest.glb",
+  "thumbnailUrl": "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
+  "fileName": "lord_sri_ram_in_the_forest.glb",
+  "uploadDate": "2024-01-15T12:00:00Z",
+  "tags": ["ram", "hindu", "divine", "forest", "sacred", "rama"],
+  "fileSize": 0,
+  "description": "Lord Sri Rama meditating in the peaceful forest during exile",
+  "source": "github"
+}
