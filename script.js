@@ -1447,5 +1447,41 @@ window.DivineCosmos = {
         }
     }
 };
+// Add this function to debug
+async function debugLoadProducts() {
+    console.log('🔍 Starting debug...');
+    
+    try {
+        // Test the URL
+        const testUrl = "https://shank122004-tech.github.io/DivineAppWeb/models.json";
+        console.log('📡 Testing URL:', testUrl);
+        
+        const response = await fetch(testUrl + '?_=' + Date.now());
+        console.log('📊 Response status:', response.status);
+        console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ JSON loaded:', data);
+            console.log('📦 Number of models:', data.length);
+            
+            if (data.length > 0) {
+                console.log('🔍 First model:', data[0]);
+                console.log('🔗 First model GLB URL:', data[0].glbUrl);
+                
+                // Test if GLB URL is accessible
+                const glbResponse = await fetch(data[0].glbUrl, { method: 'HEAD' });
+                console.log('🔗 GLB URL accessible:', glbResponse.ok);
+            }
+        } else {
+            console.error('❌ Failed to load JSON:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ Debug error:', error);
+    }
+}
 
+// Call this function after page loads
+// You can also call it from browser console: debugLoadProducts()
 console.log('✨ Divine Cosmos Script Loaded Successfully!');
+
