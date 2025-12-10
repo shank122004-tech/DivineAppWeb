@@ -12,9 +12,9 @@ const DIVINE_CONFIG = {
     SECURITY_SIGNATURE: "DM-9937-COSMIC-SECURE",
     
     // GitHub Configuration
-    DEFAULT_GITHUB_USERNAME: "DivineMantra",
-    DEFAULT_GITHUB_REPO: "divine-models",
-    DEFAULT_MODELS_JSON_URL: "https://divinemantra.github.io/divine-models/models.json",
+    GITHUB_USERNAME: "shank122004-tech",
+    GITHUB_REPO: "DivineAppWeb",
+    MODELS_JSON_URL: "https://shank122004-tech.github.io/DivineAppWeb/models.json",
     
     // Mobile settings
     MOBILE_BREAKPOINT: 768,
@@ -65,6 +65,34 @@ const DIVINE_CONFIG = {
             tags: ["mandala", "lotus", "meditation", "geometry"],
             fileSize: 3145728,
             description: "Sacred geometric pattern for meditation",
+            securitySignature: "DM-9937-COSMIC-SECURE"
+        },
+        {
+            id: 4,
+            name: "Shiva Nataraja",
+            type: "github",
+            source: "github",
+            glbUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
+            thumbnailUrl: "https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop",
+            fileName: "shiva_nataraja.glb",
+            uploadDate: new Date().toISOString(),
+            tags: ["shiva", "hindu", "dance", "sacred"],
+            fileSize: 6291456,
+            description: "Lord Shiva as the cosmic dancer Nataraja",
+            securitySignature: "DM-9937-COSMIC-SECURE"
+        },
+        {
+            id: 5,
+            name: "Golden Buddha",
+            type: "github",
+            source: "github",
+            glbUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
+            thumbnailUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop",
+            fileName: "golden_buddha.glb",
+            uploadDate: new Date().toISOString(),
+            tags: ["buddha", "gold", "meditation", "peace"],
+            fileSize: 7340032,
+            description: "Golden Buddha statue for meditation and peace",
             securitySignature: "DM-9937-COSMIC-SECURE"
         }
     ]
@@ -145,12 +173,15 @@ function cacheElements() {
         modelsGrid: document.getElementById('modelsGrid'),
         adminModelsGrid: document.getElementById('adminModelsGrid'),
         emptyState: document.getElementById('emptyState'),
+        loadingSpinner: document.getElementById('loadingSpinner'),
         totalModelsCount: document.getElementById('totalModelsCount'),
         
         // Upload Portal
         modelName: document.getElementById('modelName'),
         modelThumbnail: document.getElementById('modelThumbnail'),
         modelFile: document.getElementById('modelFile'),
+        modelTags: document.getElementById('modelTags'),
+        modelDescription: document.getElementById('modelDescription'),
         uploadBtn: document.getElementById('uploadBtn'),
         
         // GitHub Portal
@@ -165,7 +196,9 @@ function cacheElements() {
         
         // Management Portal
         modelSearch: document.getElementById('modelSearch'),
+        searchModels: document.getElementById('searchModels'),
         filterBtns: document.querySelectorAll('.filter-btn'),
+        filterTags: document.querySelectorAll('.filter-tag'),
         
         // Model Preview
         previewModelName: document.getElementById('previewModelName'),
@@ -173,6 +206,7 @@ function cacheElements() {
         previewModelSource: document.getElementById('previewModelSource'),
         previewModelDate: document.getElementById('previewModelDate'),
         previewModelTags: document.getElementById('previewModelTags'),
+        previewModelDesc: document.getElementById('previewModelDesc'),
         downloadPreviewBtn: document.getElementById('downloadPreviewBtn'),
         closePreviewBtn: document.querySelector('.close-preview-btn'),
         
@@ -187,7 +221,12 @@ function cacheElements() {
         portalContents: document.querySelectorAll('.portal-content'),
         
         // Close Buttons
-        closeModalBtns: document.querySelectorAll('.close-modal, .divine-close')
+        closeModalBtns: document.querySelectorAll('.close-modal, .divine-close'),
+        
+        // Statistics
+        totalDownloads: document.getElementById('totalDownloads'),
+        todayDownloads: document.getElementById('todayDownloads'),
+        popularModel: document.getElementById('popularModel')
     };
 }
 
@@ -205,56 +244,55 @@ async function initializeDivineCosmos() {
 // DATABASE FUNCTIONS
 // ==============================
 
-// Robust initDivineDB: ensures object store exists and prevents race conditions
 function initDivineDB() {
-  return new Promise((resolve, reject) => {
-    const name = DIVINE_CONFIG.DB_NAME;
-    const baseVersion = DIVINE_CONFIG.DB_VERSION || 1;
-
-    function openDbWithVersion(version) {
-      const req = indexedDB.open(name, version);
-      req.onerror = () => reject(req.error);
-      req.onblocked = () => console.warn('IndexedDB open blocked; close other tabs using site.');
-      
-      req.onsuccess = () => {
-        divineDB = req.result;
-        // if store exists, ready
-        if (divineDB.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
-          resolve();
-          return;
-        }
-        // store missing — close and attempt upgrade by reopening with +1 version
-        const newVersion = (divineDB.version || version) + 1;
-        divineDB.close();
-        console.warn(`Object store "${DIVINE_CONFIG.STORE_NAME}" not found. Upgrading DB to v${newVersion}...`);
-        openDbWithVersion(newVersion); // recursive attempt to trigger onupgradeneeded
-      };
-
-      req.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        console.info('onupgradeneeded fired for version', event.oldVersion, '->', event.newVersion);
-        if (!db.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
-          const store = db.createObjectStore(DIVINE_CONFIG.STORE_NAME, {
-            keyPath: 'id',
-            autoIncrement: true
-          });
-          store.createIndex('name', 'name', { unique: false });
-          store.createIndex('type', 'type', { unique: false });
-          store.createIndex('source', 'source', { unique: false });
-          store.createIndex('uploadDate', 'uploadDate', { unique: false });
-          store.createIndex('tags', 'tags', { multiEntry: true });
-          console.info('Created object store:', DIVINE_CONFIG.STORE_NAME);
-        }
-      };
-    }
-
-    // Start open attempt with configured version
-    openDbWithVersion(baseVersion);
-  });
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DIVINE_CONFIG.DB_NAME, DIVINE_CONFIG.DB_VERSION);
+        
+        request.onerror = () => {
+            console.error('IndexedDB error:', request.error);
+            reject(request.error);
+        };
+        
+        request.onsuccess = () => {
+            divineDB = request.result;
+            console.log('✅ Divine Database initialized');
+            resolve();
+        };
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            
+            // Create object store if it doesn't exist
+            if (!db.objectStoreNames.contains(DIVINE_CONFIG.STORE_NAME)) {
+                const store = db.createObjectStore(DIVINE_CONFIG.STORE_NAME, {
+                    keyPath: 'id',
+                    autoIncrement: true
+                });
+                
+                // Create indexes
+                store.createIndex('name', 'name', { unique: false });
+                store.createIndex('type', 'type', { unique: false });
+                store.createIndex('source', 'source', { unique: false });
+                store.createIndex('uploadDate', 'uploadDate', { unique: false });
+                store.createIndex('tags', 'tags', { multiEntry: true });
+                
+                console.log('✅ Created object store:', DIVINE_CONFIG.STORE_NAME);
+            }
+        };
+        
+        request.onblocked = () => {
+            console.warn('IndexedDB open blocked; close other tabs using site.');
+        };
+    });
 }
 
 function saveModel(model) {
     return new Promise((resolve, reject) => {
+        if (!divineDB) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+        
         const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
         const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
         const request = store.add(model);
@@ -266,6 +304,11 @@ function saveModel(model) {
 
 function updateModel(id, updates) {
     return new Promise((resolve, reject) => {
+        if (!divineDB) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+        
         const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
         const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
         
@@ -273,9 +316,14 @@ function updateModel(id, updates) {
         
         getRequest.onsuccess = () => {
             const existingModel = getRequest.result;
-            const updatedModel = { ...existingModel, ...updates, id };
+            if (!existingModel) {
+                reject(new Error('Model not found'));
+                return;
+            }
             
+            const updatedModel = { ...existingModel, ...updates, id };
             const putRequest = store.put(updatedModel);
+            
             putRequest.onsuccess = () => resolve(putRequest.result);
             putRequest.onerror = () => reject(putRequest.error);
         };
@@ -286,6 +334,11 @@ function updateModel(id, updates) {
 
 function deleteModel(id) {
     return new Promise((resolve, reject) => {
+        if (!divineDB) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+        
         const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
         const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
         const request = store.delete(id);
@@ -297,6 +350,11 @@ function deleteModel(id) {
 
 function getAllModels() {
     return new Promise((resolve, reject) => {
+        if (!divineDB) {
+            resolve([]);
+            return;
+        }
+        
         const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readonly');
         const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
         const request = store.getAll();
@@ -312,16 +370,28 @@ function getAllModels() {
 
 async function loadAndRenderModels() {
     try {
-        const localModels = await getAllModels();
+        // Show loading spinner
+        if (elements.loadingSpinner) {
+            elements.loadingSpinner.style.display = 'block';
+        }
         
-        // If no local models, add sample models
-        if (localModels.length === 0) {
+        // Load models from multiple sources
+        const [localModels, remoteModels] = await Promise.all([
+            getAllModels(),
+            loadRemoteModels()
+        ]);
+        
+        // Merge models (remote models take precedence)
+        const mergedModels = mergeModels(remoteModels, localModels);
+        
+        // If no models, add sample models
+        if (mergedModels.length === 0) {
             for (const model of DIVINE_CONFIG.SAMPLE_MODELS) {
                 await saveModel(model);
             }
             allModels = DIVINE_CONFIG.SAMPLE_MODELS;
         } else {
-            allModels = localModels;
+            allModels = mergedModels;
         }
         
         filteredModels = [...allModels];
@@ -335,12 +405,28 @@ async function loadAndRenderModels() {
         // Update admin grid if in admin mode
         if (isDivineAdmin) {
             renderModels(allModels, elements.adminModelsGrid, true);
-            elements.totalModelsCount.textContent = allModels.length;
+            if (elements.totalModelsCount) {
+                elements.totalModelsCount.textContent = allModels.length;
+            }
+        }
+        
+        // Hide loading spinner
+        if (elements.loadingSpinner) {
+            elements.loadingSpinner.style.display = 'none';
+        }
+        
+        // Show/hide empty state
+        if (elements.emptyState) {
+            elements.emptyState.style.display = allModels.length === 0 ? 'block' : 'none';
         }
         
     } catch (error) {
         console.error('Failed to load models:', error);
         showNotification('Failed to load divine models', 'error');
+        
+        if (elements.loadingSpinner) {
+            elements.loadingSpinner.style.display = 'none';
+        }
     }
 }
 
@@ -350,14 +436,7 @@ function renderModels(models, container, isAdminView) {
     container.innerHTML = '';
     
     if (!models || models.length === 0) {
-        if (container === elements.modelsGrid && elements.emptyState) {
-            elements.emptyState.style.display = 'block';
-        }
         return;
-    }
-    
-    if (container === elements.modelsGrid && elements.emptyState) {
-        elements.emptyState.style.display = 'none';
     }
     
     models.forEach((model, index) => {
@@ -374,10 +453,10 @@ function createModelCard(model, isAdminView) {
     card.dataset.source = model.source;
     card.dataset.tags = model.tags ? model.tags.join(',') : '';
     
-    // Thumbnail
-    const thumbnailSrc = model.thumbnailUrl || 
-                        model.thumbnail || 
-                        'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop';
+    // Normalize model data
+    const normalizedModel = normalizeModel(model);
+    const thumbnailSrc = normalizedModel.thumbnailUrl;
+    const glbUrl = normalizedModel.glbUrl;
     
     // Source badge
     let sourceBadge = '';
@@ -405,11 +484,25 @@ function createModelCard(model, isAdminView) {
     
     card.innerHTML = `
         <div class="model-preview">
-            <img src="${thumbnailSrc}" alt="${model.name}" loading="lazy">
+            ${glbUrl ? `
+                <model-viewer 
+                    src="${glbUrl}"
+                    alt="${model.name}"
+                    auto-rotate
+                    camera-controls
+                    shadow-intensity="1"
+                    environment-image="neutral"
+                    loading="lazy"
+                    style="width: 100%; height: 100%;">
+                </model-viewer>
+            ` : `
+                <img src="${thumbnailSrc}" alt="${model.name}" loading="lazy">
+            `}
             ${sourceBadge}
         </div>
         <div class="model-info">
             <h3 class="model-name">${model.name}</h3>
+            ${model.description ? `<p class="model-description">${model.description.substring(0, 80)}${model.description.length > 80 ? '...' : ''}</p>` : ''}
             <div class="model-meta">
                 <span class="meta-item">
                     <i class="fas fa-calendar"></i>
@@ -460,6 +553,44 @@ function createModelCard(model, isAdminView) {
     return card;
 }
 
+function normalizeModel(model) {
+    // Ensure consistent field names
+    const normalized = { ...model };
+    
+    // Normalize GLB URL
+    if (model.glbUrl) {
+        normalized.glbUrl = model.glbUrl;
+    } else if (model.src) {
+        normalized.glbUrl = model.src;
+    } else if (model.url) {
+        normalized.glbUrl = model.url;
+    }
+    
+    // Normalize thumbnail URL
+    if (model.thumbnailUrl) {
+        normalized.thumbnailUrl = model.thumbnailUrl;
+    } else if (model.thumbnail) {
+        normalized.thumbnailUrl = model.thumbnail;
+    } else if (model.image) {
+        normalized.thumbnailUrl = model.image;
+    } else {
+        // Default thumbnail
+        normalized.thumbnailUrl = getDefaultThumbnail(model.name);
+    }
+    
+    // Ensure fileName
+    if (!normalized.fileName && normalized.glbUrl) {
+        normalized.fileName = normalized.glbUrl.split('/').pop() || `${model.name.replace(/\s+/g, '_').toLowerCase()}.glb`;
+    }
+    
+    // Ensure tags array
+    if (!normalized.tags || !Array.isArray(normalized.tags)) {
+        normalized.tags = ['divine'];
+    }
+    
+    return normalized;
+}
+
 function previewModel(model) {
     if (!model.glbUrl) {
         showNotification('No GLB URL available for preview', 'error');
@@ -473,6 +604,7 @@ function previewModel(model) {
                                              model.source === 'upload' ? 'Local Upload' : 'External URL';
     elements.previewModelDate.textContent = new Date(model.uploadDate).toLocaleDateString();
     elements.previewModelTags.textContent = model.tags ? model.tags.join(', ') : 'No tags';
+    elements.previewModelDesc.textContent = model.description || 'No description available';
     
     // Set download button data
     elements.downloadPreviewBtn.dataset.modelId = model.id;
@@ -536,7 +668,9 @@ async function deleteModelFromUI(modelId) {
         
         if (isDivineAdmin) {
             renderModels(allModels, elements.adminModelsGrid, true);
-            elements.totalModelsCount.textContent = allModels.length;
+            if (elements.totalModelsCount) {
+                elements.totalModelsCount.textContent = allModels.length;
+            }
         }
         
         showNotification('Model removed from divine cosmos', 'warning');
@@ -545,6 +679,62 @@ async function deleteModelFromUI(modelId) {
         console.error('Deletion failed:', error);
         showNotification('Failed to delete model', 'error');
     }
+}
+
+// ==============================
+// REMOTE MODELS LOADING
+// ==============================
+
+async function loadRemoteModels() {
+    try {
+        const timestamp = Date.now();
+        const url = `${DIVINE_CONFIG.MODELS_JSON_URL}?_=${timestamp}`;
+        
+        console.log('🌐 Loading remote models from:', url);
+        
+        const response = await fetch(url, {
+            cache: 'no-store',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const models = await response.json();
+        console.log(`✅ Loaded ${models.length} remote models`);
+        return Array.isArray(models) ? models.map(normalizeModel) : [];
+        
+    } catch (error) {
+        console.warn('Could not load remote models:', error.message);
+        return [];
+    }
+}
+
+function mergeModels(remoteModels, localModels) {
+    const merged = [...remoteModels];
+    const remoteUrls = new Set(remoteModels.map(m => m.glbUrl || m.id));
+    
+    // Add local models that aren't in remote
+    for (const localModel of localModels) {
+        const normalized = normalizeModel(localModel);
+        if (!remoteUrls.has(normalized.glbUrl || normalized.id)) {
+            merged.push(normalized);
+        }
+    }
+    
+    // Remove duplicates by ID and URL
+    const uniqueMap = new Map();
+    for (const model of merged) {
+        const key = model.glbUrl || model.id;
+        if (key && !uniqueMap.has(key)) {
+            uniqueMap.set(key, model);
+        }
+    }
+    
+    return Array.from(uniqueMap.values());
 }
 
 // ==============================
@@ -571,7 +761,7 @@ function convertToRawGithubUrl(url) {
         if (urlObj.hostname.endsWith('.github.io')) {
             const parts = urlObj.hostname.split('.');
             const user = parts[0];
-            const repo = urlObj.pathname.split('/')[1] || DIVINE_CONFIG.DEFAULT_GITHUB_REPO;
+            const repo = urlObj.pathname.split('/')[1] || DIVINE_CONFIG.GITHUB_REPO;
             const filePath = urlObj.pathname.split('/').slice(2).join('/');
             return `https://raw.githubusercontent.com/${user}/${repo}/main/${filePath}`;
         }
@@ -697,7 +887,7 @@ async function addGithubModel() {
             fileName: url.split('/').pop() || `${name.replace(/\s+/g, '_').toLowerCase()}.glb`,
             uploadDate: new Date().toISOString(),
             tags: ['github', 'divine', ...tags],
-            fileSize: 0, // Would need HEAD request to get actual size
+            fileSize: 0,
             description: `Divine model hosted on GitHub: ${name}`,
             securitySignature: DIVINE_CONFIG.SECURITY_SIGNATURE
         };
@@ -722,7 +912,9 @@ async function addGithubModel() {
             
             if (isDivineAdmin) {
                 renderModels(allModels, elements.adminModelsGrid, true);
-                elements.totalModelsCount.textContent = allModels.length;
+                if (elements.totalModelsCount) {
+                    elements.totalModelsCount.textContent = allModels.length;
+                }
             }
             
             // Reset form
@@ -739,13 +931,15 @@ async function addGithubModel() {
 }
 
 function getDefaultThumbnail(modelName) {
-    // Return appropriate default thumbnail based on model name
     const thumbnails = {
         'krishna': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
         'buddha': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
         'mandala': 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop',
         'lotus': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
-        'shiva': 'https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop'
+        'shiva': 'https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop',
+        'hanuman': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
+        'ganesha': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
+        'meditation': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop'
     };
     
     const lowerName = modelName.toLowerCase();
@@ -767,6 +961,10 @@ async function handleFileUpload() {
     const name = elements.modelName.value.trim();
     const thumbnailFile = elements.modelThumbnail.files[0];
     const glbFile = elements.modelFile.files[0];
+    const tags = elements.modelTags.value.split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag);
+    const description = elements.modelDescription.value.trim();
     
     if (!name || !thumbnailFile || !glbFile) {
         showNotification('Please fill all required fields', 'error');
@@ -802,9 +1000,9 @@ async function handleFileUpload() {
             glbData: new Uint8Array(glbData),
             fileName: `${name.replace(/\s+/g, '_').toLowerCase()}_divine.glb`,
             uploadDate: new Date().toISOString(),
-            tags: ['uploaded', 'divine', 'local'],
+            tags: ['uploaded', 'divine', 'local', ...tags],
             fileSize: glbFile.size,
-            description: `Locally uploaded divine model: ${name}`,
+            description: description || `Locally uploaded divine model: ${name}`,
             securitySignature: DIVINE_CONFIG.SECURITY_SIGNATURE
         };
         
@@ -828,7 +1026,9 @@ async function handleFileUpload() {
             
             if (isDivineAdmin) {
                 renderModels(allModels, elements.adminModelsGrid, true);
-                elements.totalModelsCount.textContent = allModels.length;
+                if (elements.totalModelsCount) {
+                    elements.totalModelsCount.textContent = allModels.length;
+                }
             }
             
             // Reset form
@@ -958,6 +1158,8 @@ function resetUploadForm() {
     elements.modelName.value = '';
     elements.modelThumbnail.value = '';
     elements.modelFile.value = '';
+    elements.modelTags.value = '';
+    elements.modelDescription.value = '';
     
     const uploadAreas = document.querySelectorAll('.upload-area span');
     uploadAreas.forEach(area => {
@@ -1088,19 +1290,35 @@ function setupEventListeners() {
         });
     });
     
-    // Model Search
-    if (elements.modelSearch) {
-        elements.modelSearch.addEventListener('input', (e) => {
+    // Model Search (Main)
+    if (elements.searchModels) {
+        elements.searchModels.addEventListener('input', (e) => {
             filterModels(e.target.value);
         });
     }
     
-    // Filter Buttons
+    // Model Search (Admin)
+    if (elements.modelSearch) {
+        elements.modelSearch.addEventListener('input', (e) => {
+            filterModelsAdmin(e.target.value);
+        });
+    }
+    
+    // Filter Buttons (Admin)
     elements.filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             elements.filterBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            filterModels(elements.modelSearch.value, btn.dataset.filter);
+            filterModelsAdmin(elements.modelSearch.value, btn.dataset.filter);
+        });
+    });
+    
+    // Filter Tags (Main)
+    elements.filterTags.forEach(btn => {
+        btn.addEventListener('click', () => {
+            elements.filterTags.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filterModelsByTag(btn.dataset.tag);
         });
     });
     
@@ -1218,7 +1436,9 @@ function handleLogin() {
             
             // Load admin models
             renderModels(allModels, elements.adminModelsGrid, true);
-            elements.totalModelsCount.textContent = allModels.length;
+            if (elements.totalModelsCount) {
+                elements.totalModelsCount.textContent = allModels.length;
+            }
             
             showNotification('Welcome to Divine Administration Portal', 'success');
             
@@ -1264,7 +1484,35 @@ function handleLogout() {
 // FILTERING & SEARCH
 // ==============================
 
-function filterModels(searchTerm = '', filter = 'all') {
+function filterModels(searchTerm = '') {
+    filteredModels = allModels.filter(model => {
+        // Search term filter
+        const matchesSearch = !searchTerm || 
+            model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (model.tags && model.tags.some(tag => 
+                tag.toLowerCase().includes(searchTerm.toLowerCase())
+            )) ||
+            (model.description && model.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        
+        return matchesSearch;
+    });
+    
+    renderModels(filteredModels, elements.modelsGrid, false);
+}
+
+function filterModelsByTag(tag) {
+    if (tag === 'all') {
+        filteredModels = [...allModels];
+    } else {
+        filteredModels = allModels.filter(model => 
+            model.tags && model.tags.some(t => t.toLowerCase() === tag.toLowerCase())
+        );
+    }
+    
+    renderModels(filteredModels, elements.modelsGrid, false);
+}
+
+function filterModelsAdmin(searchTerm = '', filter = 'all') {
     filteredModels = allModels.filter(model => {
         // Search term filter
         const matchesSearch = !searchTerm || 
@@ -1434,6 +1682,29 @@ async function updateDownloadCount(modelId) {
             const downloadCounter = document.querySelector('.cosmic-count[data-count="0"]');
             if (downloadCounter && downloadCounter.parentElement.querySelector('.stat-label').textContent.includes('Downloads')) {
                 downloadCounter.textContent = totalDownloads;
+            }
+            
+            // Update admin statistics
+            if (isDivineAdmin && elements.totalDownloads) {
+                elements.totalDownloads.textContent = totalDownloads;
+                
+                // Update today's downloads (simplified)
+                const today = new Date().toDateString();
+                const todayDownloads = allModels.reduce((sum, m) => {
+                    const lastDownload = m.lastDownload ? new Date(m.lastDownload).toDateString() : null;
+                    return sum + (lastDownload === today ? (m.downloadCount || 0) : 0);
+                }, 0);
+                if (elements.todayDownloads) {
+                    elements.todayDownloads.textContent = todayDownloads;
+                }
+                
+                // Update most popular model
+                const popular = allModels.reduce((max, m) => 
+                    (m.downloadCount || 0) > (max.downloadCount || 0) ? m : max
+                , allModels[0] || {});
+                if (elements.popularModel) {
+                    elements.popularModel.textContent = popular.name || 'None';
+                }
             }
         }
     } catch (error) {
