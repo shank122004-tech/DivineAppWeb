@@ -22,17 +22,18 @@ const CONFIG = {
     
     // Default models for initial state
     DEFAULT_MODELS: [
-        {
-            id: "sample-1",
-            name: "Shiva Statue",
-            filename: "shiva@divinemantra.glb",
-            url: "https://github.com/your-username/your-repo/raw/main/models/shiva.glb",
-            thumbnail: "https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop",
-            category: "hindu",
-            description: "Beautiful Shiva statue GLB model for meditation and spiritual visualization",
-            source: "github",
-            uploadDate: new Date().toISOString()
-        },
+  {
+    "id": "test_model_1",
+    "name": "Divine Krishna Statue",
+    "description": "Beautiful 3D model of Lord Krishna",
+    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
+    "tags": ["hindu", "krishna", "divine", "statue"],
+    "uploadDate": "2024-01-15",
+    "fileSize": 4500000,
+    "rating": 4.8,
+    "downloadCount": 1250
+  },
         {
             id: "sample-2",
             name: "Buddha Meditation",
@@ -1076,3 +1077,4 @@ window.Divine3DGallery = {
 };
 
 console.log('✨ Divine 3D Models Gallery loaded successfully!');
+
