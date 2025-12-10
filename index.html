@@ -1,26 +1,41 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Divine 3D Gallery | Premium GLB Model Portal</title>
+    <title>Divine 3D Gallery | Premium GLB Models</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="dark-theme">
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <div class="loading-icon">✨</div>
+                <h2>Divine 3D Gallery</h2>
+            </div>
+            <div class="loading-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <span class="loading-text">Initializing Gallery...</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Particle Background -->
-    <div class="particle-background"></div>
-    
+    <div class="particle-background" id="particleBackground"></div>
+
     <!-- Header -->
     <header class="main-header">
         <div class="header-container">
             <div class="logo">
-                <div class="logo-icon">✨</div>
+                <div class="logo-icon">🛕</div>
                 <h1>Divine<span>3D</span></h1>
-                <div class="logo-subtitle">Premium GLB Gallery</div>
+                <div class="logo-subtitle">Sacred GLB Collection</div>
             </div>
             
             <nav class="main-nav">
@@ -29,9 +44,9 @@
                 </button>
                 <div class="nav-links" id="navLinks">
                     <a href="#hero" class="nav-link active">Home</a>
-                    <a href="#gallery" class="nav-link">Gallery</a>
+                    <a href="#gallery" class="nav-link">Models</a>
                     <a href="#categories" class="nav-link">Categories</a>
-                    <a href="#about" class="nav-link">About</a>
+                    <a href="#upload" class="nav-link">Upload</a>
                 </div>
             </nav>
             
@@ -49,7 +64,7 @@
                 </button>
                 
                 <button class="admin-btn" id="adminBtn">
-                    <i class="fas fa-lock"></i>
+                    <i class="fas fa-user-shield"></i>
                     <span class="btn-text">Admin</span>
                 </button>
                 
@@ -59,19 +74,19 @@
             </div>
         </div>
     </header>
-    
+
     <!-- Hero Section -->
     <section class="hero-section" id="hero">
         <div class="hero-content">
             <div class="hero-text">
                 <h2 class="hero-title">
-                    <span class="gradient-text">Explore Divine 3D</span>
-                    <span class="hero-subtitle">Premium GLB Model Collection</span>
+                    <span class="gradient-text">Divine 3D Gallery</span>
+                    <span class="hero-subtitle">Sacred GLB Models Collection</span>
                 </h2>
                 <p class="hero-description">
-                    Immerse yourself in our curated collection of stunning 3D models. 
-                    Browse, preview, and download premium GLB assets with our advanced 
-                    WebGL viewer.
+                    Explore our curated collection of sacred 3D models. 
+                    Preview, download, and experience divine GLB assets with 
+                    our secure WebGL viewer.
                 </p>
                 <div class="hero-stats">
                     <div class="stat">
@@ -79,13 +94,21 @@
                         <div class="stat-label">Models</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-number" id="totalCategories">0</div>
-                        <div class="stat-label">Categories</div>
+                        <div class="stat-number" id="activeUsers">1.2K</div>
+                        <div class="stat-label">Devotees</div>
                     </div>
                     <div class="stat">
                         <div class="stat-number">∞</div>
-                        <div class="stat-label">Possibilities</div>
+                        <div class="stat-label">Blessings</div>
                     </div>
+                </div>
+                <div class="hero-actions">
+                    <button class="hero-btn primary" onclick="scrollToSection('gallery')">
+                        <i class="fas fa-eye"></i> Browse Models
+                    </button>
+                    <button class="hero-btn secondary" id="uploadGuideBtn">
+                        <i class="fas fa-upload"></i> Upload Guide
+                    </button>
                 </div>
             </div>
             
@@ -93,8 +116,9 @@
                 <div class="floating-card">
                     <div class="card-glow"></div>
                     <model-viewer
+                        id="hero-preview"
                         src=""
-                        alt="3D Preview"
+                        alt="Divine 3D Model"
                         auto-rotate
                         camera-controls
                         environment-image="neutral"
@@ -106,54 +130,88 @@
             </div>
         </div>
         
-        <div class="scroll-indicator">
+        <div class="scroll-indicator" onclick="scrollToSection('gallery')">
             <i class="fas fa-chevron-down"></i>
         </div>
     </section>
-    
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="section-header">
+            <h2 class="section-title">Why Choose Divine Gallery</h2>
+            <p class="section-subtitle">Secure, premium, and spiritually curated</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3 class="feature-title">Secure Models</h3>
+                <p class="feature-desc">All GLB files are verified and secure with digital signatures</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3 class="feature-title">Fast Preview</h3>
+                <p class="feature-desc">Instant 3D preview with WebGL, no downloads needed</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3 class="feature-title">Premium Quality</h3>
+                <p class="feature-desc">High-quality models with optimized textures and geometry</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3 class="feature-title">Mobile Ready</h3>
+                <p class="feature-desc">Full responsive design with AR support on mobile</p>
+            </div>
+        </div>
+    </section>
+
     <!-- Categories Section -->
     <section class="categories-section" id="categories">
         <div class="section-header">
             <h2 class="section-title">Browse by Category</h2>
-            <p class="section-subtitle">Filter models by category for easy discovery</p>
+            <p class="section-subtitle">Filter sacred models by category</p>
         </div>
         
         <div class="categories-container" id="categoriesContainer">
             <!-- Categories will be dynamically loaded -->
         </div>
-        
-        <div class="category-controls">
-            <button class="category-btn active" data-category="all">All Models</button>
-            <!-- Category buttons will be dynamically added -->
-        </div>
     </section>
-    
+
     <!-- Gallery Section -->
     <section class="gallery-section" id="gallery">
         <div class="section-header">
-            <h2 class="section-title">3D Model Gallery</h2>
+            <h2 class="section-title">Sacred Model Collection</h2>
             <p class="section-subtitle">Click any model to preview in 3D</p>
         </div>
         
         <div class="gallery-controls">
             <div class="search-filter">
-                <input type="text" id="gallerySearch" placeholder="Search by name, description, or tags..." class="filter-input">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="gallerySearch" placeholder="Search by name, description, or tags..." class="filter-input">
+                </div>
                 <select id="categoryFilter" class="filter-select">
                     <option value="all">All Categories</option>
                 </select>
+                <select id="sortSelect" class="filter-select">
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="newest">Newest First</option>
+                    <option value="popular">Most Popular</option>
+                </select>
                 <button class="filter-clear" id="clearFilters">
-                    <i class="fas fa-times"></i> Clear Filters
+                    <i class="fas fa-times"></i> Clear
                 </button>
             </div>
             
-            <div class="sort-controls">
-                <label for="sortSelect">Sort by:</label>
-                <select id="sortSelect" class="sort-select">
-                    <option value="name-asc">Name (A-Z)</option>
-                    <option value="name-desc">Name (Z-A)</option>
-                    <option value="date-new">Newest First</option>
-                    <option value="date-old">Oldest First</option>
-                </select>
+            <div class="view-controls">
+                <button class="view-btn active" data-view="grid">
+                    <i class="fas fa-th"></i>
+                </button>
+                <button class="view-btn" data-view="list">
+                    <i class="fas fa-list"></i>
+                </button>
             </div>
         </div>
         
@@ -164,66 +222,77 @@
                 <div class="model-card skeleton"></div>
                 <div class="model-card skeleton"></div>
                 <div class="model-card skeleton"></div>
-                <div class="model-card skeleton"></div>
-                <div class="model-card skeleton"></div>
             </div>
         </div>
         
         <div class="gallery-footer">
             <div class="loading-indicator" id="loadingIndicator">
                 <div class="loading-spinner"></div>
-                <span>Loading models...</span>
+                <span>Loading sacred models...</span>
             </div>
             
             <div class="no-results" id="noResults" style="display: none;">
                 <i class="fas fa-search"></i>
                 <h3>No models found</h3>
                 <p>Try adjusting your search or filters</p>
+                <button class="action-btn" onclick="clearFilters()">
+                    Clear All Filters
+                </button>
             </div>
         </div>
     </section>
-    
-    <!-- About Section -->
-    <section class="about-section" id="about">
-        <div class="about-container">
-            <div class="about-content">
-                <h2 class="about-title">About This Gallery</h2>
-                <p class="about-text">
-                    Divine 3D Gallery is a premium platform for discovering and exploring 
-                    high-quality 3D models in GLB format. Our collection is curated from 
-                    various sources and updated regularly.
-                </p>
-                <div class="features-grid">
-                    <div class="feature">
-                        <div class="feature-icon">✨</div>
-                        <h3 class="feature-title">WebGL Preview</h3>
-                        <p class="feature-desc">Interactive 3D previews with no plugin required</p>
+
+    <!-- Upload Guide Section -->
+    <section class="upload-section" id="upload">
+        <div class="section-header">
+            <h2 class="section-title">How to Upload Models</h2>
+            <p class="section-subtitle">Follow these steps to add secure GLB files</p>
+        </div>
+        
+        <div class="upload-steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Prepare Your GLB File</h3>
+                    <p>Ensure your file has the <code>@divinemantra</code> signature in filename</p>
+                    <div class="step-example">
+                        <code>your_model@divinemantra.glb</code>
                     </div>
-                    <div class="feature">
-                        <div class="feature-icon">🚀</div>
-                        <h3 class="feature-title">Instant Updates</h3>
-                        <p class="feature-desc">Auto-refresh from GitHub every 15 seconds</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Add Internal Signature</h3>
+                    <p>Include the security signature in your GLB metadata</p>
+                    <div class="step-example">
+                        <code>"signature": "DM-9937-SECURE-CODE"</code>
                     </div>
-                    <div class="feature">
-                        <div class="feature-icon">🎨</div>
-                        <h3 class="feature-title">Premium UI</h3>
-                        <p class="feature-desc">Glassmorphism design with smooth animations</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🔧</div>
-                        <h3 class="feature-title">Admin Tools</h3>
-                        <p class="feature-desc">Easy model management with drag & drop</p>
-                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Upload via Admin Panel</h3>
+                    <p>Use the admin panel to securely upload your verified model</p>
+                    <button class="action-btn" onclick="openAdminPanel()">
+                        <i class="fas fa-lock"></i> Open Admin Panel
+                    </button>
                 </div>
             </div>
         </div>
     </section>
-    
+
     <!-- 3D Preview Modal -->
     <div class="modal-overlay" id="previewModal">
         <div class="modal-container">
             <div class="modal-header">
-                <h3 class="modal-title" id="previewTitle">3D Preview</h3>
+                <div class="modal-title-section">
+                    <h3 class="modal-title" id="previewTitle">3D Preview</h3>
+                    <div class="modal-subtitle" id="previewSubtitle">Loading...</div>
+                </div>
                 <button class="modal-close" id="closePreview">
                     <i class="fas fa-times"></i>
                 </button>
@@ -251,64 +320,84 @@
                     </model-viewer>
                     
                     <div class="preview-controls">
-                        <button class="preview-control-btn" id="rotateToggle">
-                            <i class="fas fa-redo"></i> Auto Rotate
+                        <button class="preview-control-btn" id="rotateToggle" title="Toggle Auto Rotate">
+                            <i class="fas fa-redo"></i>
                         </button>
-                        <button class="preview-control-btn" id="fullscreenToggle">
-                            <i class="fas fa-expand"></i> Fullscreen
+                        <button class="preview-control-btn" id="fullscreenToggle" title="Fullscreen">
+                            <i class="fas fa-expand"></i>
                         </button>
-                        <button class="preview-control-btn" id="arToggle">
-                            <i class="fas fa-vr-cardboard"></i> AR View
+                        <button class="preview-control-btn" id="arToggle" title="AR View">
+                            <i class="fas fa-vr-cardboard"></i>
+                        </button>
+                        <button class="preview-control-btn" id="resetView" title="Reset View">
+                            <i class="fas fa-sync"></i>
                         </button>
                     </div>
                 </div>
                 
-                <div class="preview-info">
-                    <div class="info-section">
-                        <h4>Model Details</h4>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Name:</span>
-                                <span class="info-value" id="previewName">-</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Category:</span>
-                                <span class="info-value" id="previewCategory">-</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Format:</span>
-                                <span class="info-value">GLB</span>
+                <div class="preview-sidebar">
+                    <div class="preview-info">
+                        <div class="info-section">
+                            <h4><i class="fas fa-info-circle"></i> Model Information</h4>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Name:</span>
+                                    <span class="info-value" id="previewName">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Category:</span>
+                                    <span class="info-value" id="previewCategory">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">File Size:</span>
+                                    <span class="info-value" id="previewSize">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Upload Date:</span>
+                                    <span class="info-value" id="previewDate">-</span>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="info-description" id="previewDescription">
-                            No description available.
+                        <div class="info-section">
+                            <h4><i class="fas fa-file-alt"></i> Description</h4>
+                            <div class="info-description" id="previewDescription">
+                                No description available.
+                            </div>
                         </div>
                         
-                        <div class="preview-actions">
-                            <button class="action-btn download-btn" id="downloadModel">
-                                <i class="fas fa-download"></i> Download GLB
-                            </button>
-                            <button class="action-btn copy-btn" id="copyUrl">
-                                <i class="fas fa-copy"></i> Copy URL
-                            </button>
-                            <button class="action-btn share-btn" id="shareModel">
-                                <i class="fas fa-share-alt"></i> Share
-                            </button>
+                        <div class="info-section">
+                            <h4><i class="fas fa-tags"></i> Tags</h4>
+                            <div class="tags-container" id="previewTags">
+                                <!-- Tags will be added here -->
+                            </div>
                         </div>
+                    </div>
+                    
+                    <div class="preview-actions">
+                        <button class="action-btn download-btn" id="downloadModel">
+                            <i class="fas fa-download"></i> Download GLB
+                        </button>
+                        <button class="action-btn copy-btn" id="copyUrl">
+                            <i class="fas fa-copy"></i> Copy URL
+                        </button>
+                        <button class="action-btn share-btn" id="shareModel">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Admin Panel -->
     <div class="admin-overlay" id="adminOverlay">
         <div class="admin-container">
             <div class="admin-header">
                 <h3 class="admin-title">
-                    <i class="fas fa-crown"></i> Admin Panel
+                    <i class="fas fa-user-shield"></i> Admin Panel
                 </h3>
+                <div class="admin-subtitle">Secure Model Management</div>
                 <button class="admin-close" id="closeAdmin">
                     <i class="fas fa-times"></i>
                 </button>
@@ -324,127 +413,169 @@
                     <p>Enter password to access admin features</p>
                     
                     <div class="login-form">
-                        <input type="password" id="adminPassword" placeholder="Enter admin password" class="login-input">
+                        <div class="form-group">
+                            <input type="password" id="adminPassword" placeholder="Enter admin password" class="login-input">
+                            <i class="fas fa-key"></i>
+                        </div>
                         <button class="login-btn" id="loginBtn">
-                            <i class="fas fa-key"></i> Unlock Panel
+                            <i class="fas fa-unlock"></i> Unlock Panel
                         </button>
-                        <p class="login-hint">Default password: admin123</p>
+                        <p class="login-hint">Default password: <code>admin123</code></p>
                     </div>
                 </div>
                 
                 <!-- Dashboard Screen -->
                 <div class="admin-dashboard" id="adminDashboard" style="display: none;">
                     <div class="dashboard-tabs">
-                        <button class="tab-btn active" data-tab="addModel">
-                            <i class="fas fa-plus-circle"></i> Add Model
+                        <button class="tab-btn active" data-tab="upload">
+                            <i class="fas fa-upload"></i> Upload Model
                         </button>
-                        <button class="tab-btn" data-tab="manageModels">
+                        <button class="tab-btn" data-tab="manage">
                             <i class="fas fa-list"></i> Manage Models
                         </button>
-                        <button class="tab-btn" data-tab="githubSync">
-                            <i class="fab fa-github"></i> GitHub Sync
+                        <button class="tab-btn" data-tab="security">
+                            <i class="fas fa-shield-alt"></i> Security
                         </button>
                     </div>
                     
                     <div class="tab-content">
-                        <!-- Add Model Tab -->
-                        <div class="tab-pane active" id="addModelTab">
+                        <!-- Upload Tab -->
+                        <div class="tab-pane active" id="uploadTab">
+                            <div class="upload-guide">
+                                <h5><i class="fas fa-info-circle"></i> Important Notes</h5>
+                                <ul>
+                                    <li>Filename must contain <code>@divinemantra</code></li>
+                                    <li>GLB must have internal signature: <code>DM-9937-SECURE-CODE</code></li>
+                                    <li>Max file size: 50MB</li>
+                                </ul>
+                            </div>
+                            
                             <div class="form-section">
-                                <h5>Upload New 3D Model</h5>
-                                
                                 <div class="upload-area" id="uploadArea">
                                     <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drag & drop GLB file here</p>
+                                    <p>Drag & drop secure GLB file here</p>
                                     <span class="upload-hint">or click to browse</span>
                                     <input type="file" id="modelFile" accept=".glb,.gltf" style="display: none;">
                                 </div>
                                 
+                                <div class="file-info" id="fileInfo" style="display: none;">
+                                    <div class="file-preview">
+                                        <i class="fas fa-cube"></i>
+                                    </div>
+                                    <div class="file-details">
+                                        <h6 id="fileName">File Name</h6>
+                                        <span id="fileSize">0 MB</span>
+                                        <span id="fileStatus" class="status-valid">✓ Secure</span>
+                                    </div>
+                                    <button class="remove-file" id="removeFile">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                
                                 <div class="form-group">
                                     <label for="modelName">Model Name *</label>
-                                    <input type="text" id="modelName" class="form-input" placeholder="Enter model name">
+                                    <input type="text" id="modelName" class="form-input" placeholder="e.g., Divine Shiva Statue">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="modelDescription">Description</label>
-                                    <textarea id="modelDescription" class="form-textarea" placeholder="Enter model description"></textarea>
+                                    <textarea id="modelDescription" class="form-textarea" 
+                                              placeholder="Describe your model..." 
+                                              rows="3"></textarea>
                                 </div>
                                 
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="modelCategory">Category</label>
-                                        <input type="text" id="modelCategory" class="form-input" placeholder="e.g., Furniture, Character">
+                                        <select id="modelCategory" class="form-select">
+                                            <option value="Spiritual">Spiritual</option>
+                                            <option value="Temple">Temple</option>
+                                            <option value="Deity">Deity</option>
+                                            <option value="Symbol">Symbol</option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="modelTags">Tags (comma separated)</label>
-                                        <input type="text" id="modelTags" class="form-input" placeholder="tag1, tag2, tag3">
+                                        <label for="modelTags">Tags</label>
+                                        <input type="text" id="modelTags" class="form-input" 
+                                               placeholder="shiva, statue, divine">
                                     </div>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="thumbnailUrl">Thumbnail URL (optional)</label>
-                                    <input type="url" id="thumbnailUrl" class="form-input" placeholder="https://example.com/thumbnail.jpg">
-                                    <p class="form-hint">Leave empty to auto-generate from GLB</p>
+                                    <input type="url" id="thumbnailUrl" class="form-input" 
+                                           placeholder="https://example.com/thumbnail.jpg">
+                                    <p class="form-hint">Leave empty for auto-generated thumbnail</p>
                                 </div>
                                 
                                 <div class="form-actions">
-                                    <button class="btn-secondary" id="previewModel">
-                                        <i class="fas fa-eye"></i> Preview
+                                    <button class="btn-secondary" id="clearForm">
+                                        <i class="fas fa-times"></i> Clear
                                     </button>
                                     <button class="btn-primary" id="addModelBtn">
-                                        <i class="fas fa-save"></i> Add to Gallery
+                                        <i class="fas fa-plus-circle"></i> Add to Gallery
                                     </button>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Manage Models Tab -->
-                        <div class="tab-pane" id="manageModelsTab">
+                        <div class="tab-pane" id="manageTab">
+                            <div class="models-header">
+                                <h5>Manage Existing Models</h5>
+                                <div class="models-count">
+                                    <span id="modelsCount">0</span> models total
+                                </div>
+                            </div>
+                            
                             <div class="models-list" id="adminModelsList">
                                 <!-- Models will be listed here -->
                             </div>
                         </div>
                         
-                        <!-- GitHub Sync Tab -->
-                        <div class="tab-pane" id="githubSyncTab">
-                            <div class="form-section">
-                                <h5>GitHub Integration</h5>
+                        <!-- Security Tab -->
+                        <div class="tab-pane" id="securityTab">
+                            <div class="security-info">
+                                <h5><i class="fas fa-shield-alt"></i> Security Configuration</h5>
                                 
-                                <div class="github-info">
-                                    <p>Connect to GitHub to automatically sync models.json</p>
-                                    
-                                    <div class="form-group">
-                                        <label for="githubUrl">GitHub Repository URL</label>
-                                        <input type="url" id="githubUrl" class="form-input" 
-                                               placeholder="https://github.com/username/repo" 
-                                               value="https://github.com/shank122004-tech/DivineAppWeb">
+                                <div class="security-item">
+                                    <div class="security-label">
+                                        <i class="fas fa-file-signature"></i>
+                                        <span>Filename Signature</span>
                                     </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="githubToken">GitHub Token (optional)</label>
-                                        <input type="password" id="githubToken" class="form-input" 
-                                               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-                                        <p class="form-hint">Required for private repos or push access</p>
+                                    <div class="security-value">
+                                        <code>@divinemantra</code>
                                     </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="jsonPath">JSON File Path</label>
-                                        <input type="text" id="jsonPath" class="form-input" 
-                                               placeholder="models.json"
-                                               value="models.json">
+                                </div>
+                                
+                                <div class="security-item">
+                                    <div class="security-label">
+                                        <i class="fas fa-key"></i>
+                                        <span>Internal Signature</span>
                                     </div>
-                                    
-                                    <div class="github-actions">
-                                        <button class="btn-secondary" id="pullJsonBtn">
-                                            <i class="fas fa-download"></i> Pull from GitHub
-                                        </button>
-                                        <button class="btn-primary" id="pushJsonBtn">
-                                            <i class="fas fa-upload"></i> Push to GitHub
-                                        </button>
+                                    <div class="security-value">
+                                        <code>DM-9937-SECURE-CODE</code>
                                     </div>
-                                    
-                                    <div class="github-status" id="githubStatus">
-                                        <!-- Status messages will appear here -->
+                                </div>
+                                
+                                <div class="security-item">
+                                    <div class="security-label">
+                                        <i class="fas fa-database"></i>
+                                        <span>Storage Method</span>
                                     </div>
+                                    <div class="security-value">
+                                        IndexedDB + LocalStorage
+                                    </div>
+                                </div>
+                                
+                                <div class="security-actions">
+                                    <button class="btn-secondary" id="resetSecurity">
+                                        <i class="fas fa-redo"></i> Reset Settings
+                                    </button>
+                                    <button class="btn-primary" id="exportData">
+                                        <i class="fas fa-download"></i> Export Data
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -454,7 +585,7 @@
             
             <div class="admin-footer">
                 <div class="admin-status" id="adminStatus">
-                    <i class="fas fa-circle"></i>
+                    <i class="fas fa-circle status-ready"></i>
                     <span>Ready</span>
                 </div>
                 <button class="btn-logout" id="logoutBtn">
@@ -463,31 +594,20 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
-    
-    <!-- Floating Action Button -->
-    <button class="fab" id="fabBtn">
-        <i class="fas fa-plus"></i>
-    </button>
-    
-    <!-- Loading Screen -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="loading-content">
-            <div class="loading-logo">
-                <div class="loading-icon">✨</div>
-                <h2>Divine 3D</h2>
-            </div>
-            <div class="loading-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-                <span class="loading-text">Loading 3D Gallery...</span>
-            </div>
-        </div>
+
+    <!-- Floating Action Buttons -->
+    <div class="fab-container">
+        <button class="fab primary" id="fabUpload" onclick="openAdminPanel()">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="fab secondary" id="fabScrollTop" onclick="scrollToTop()">
+            <i class="fas fa-arrow-up"></i>
+        </button>
     </div>
-    
+
     <script src="script.js"></script>
 </body>
 </html>
