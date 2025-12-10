@@ -211,13 +211,14 @@ async function loadModelsFromGitHub(forceRefresh = false) {
             }
         }
         
-        // Add cache busting for non-conditional requests
+        // Determine fetch URL
+        let fetchUrl;
         if (!DIVINE_CONFIG.ENABLE_CONDITIONAL_REQUESTS || !refreshState.lastETag) {
             const url = new URL(DIVINE_CONFIG.MODELS_JSON_URL);
             url.searchParams.set('_', Date.now());
-            var fetchUrl = url.toString();
+            fetchUrl = url.toString();
         } else {
-            var fetchUrl = DIVINE_CONFIG.MODELS_JSON_URL;
+            fetchUrl = DIVINE_CONFIG.MODELS_JSON_URL;
         }
         
         console.log('🌐 Fetching models from:', fetchUrl);
@@ -256,6 +257,9 @@ async function loadModelsFromGitHub(forceRefresh = false) {
             refreshState.modelsCache = models;
             refreshState.cacheTimestamp = Date.now();
             
+            // Cache models to IndexedDB
+            await cacheModelsToDB(models);
+            
             // Show success notification
             showNotification(`${models.length} models loaded successfully`, 'success');
             
@@ -277,6 +281,15 @@ async function loadModelsFromGitHub(forceRefresh = false) {
                 showNotification('Using cached models (offline mode)', 'warning');
                 return false;
             }
+        }
+        
+        // Try to load from IndexedDB as fallback
+        const cachedModels = await getCachedModelsFromDB();
+        if (cachedModels && cachedModels.length > 0) {
+            console.log('💾 Loading models from database cache...');
+            await processAndRenderModels(cachedModels);
+            showNotification('Using offline database cache', 'warning');
+            return false;
         }
         
         // Show error notification
@@ -397,7 +410,7 @@ function normalizeModel(model) {
     
     // Generate unique ID if not present
     if (!normalized.id) {
-        normalized.id = 'github_' + Math.random().toString(36).substr(2, 9);
+        normalized.id = 'github_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
     
     return normalized;
@@ -561,9 +574,12 @@ function createModelCard(model) {
             <span class="url-text">${truncateUrl(glbUrl, 40)}</span>
         </div>` : '';
     
+    // Check if model-viewer is available
+    const hasModelViewer = typeof customElements !== 'undefined' && customElements.get('model-viewer');
+    
     card.innerHTML = `
         <div class="model-preview">
-            ${glbUrl ? `
+            ${hasModelViewer && glbUrl ? `
                 <model-viewer 
                     src="${glbUrl}"
                     alt="${model.name}"
@@ -576,7 +592,7 @@ function createModelCard(model) {
                     crossorigin="anonymous">
                 </model-viewer>
             ` : `
-                <img src="${thumbnailSrc}" alt="${model.name}" loading="lazy">
+                <img src="${thumbnailSrc}" alt="${model.name}" loading="lazy" class="model-thumbnail">
             `}
             ${sourceBadge}
         </div>
@@ -626,16 +642,23 @@ function createModelCard(model) {
     if (modelViewer) {
         modelViewer.addEventListener('error', (e) => {
             console.error('Model viewer error:', e);
+            const modelClone = { ...model }; // Clone to avoid reference issues
             modelViewer.innerHTML = `
-                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);color:white;flex-direction:column;gap:10px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size:2rem;"></i>
+                <div class="model-viewer-fallback">
+                    <i class="fas fa-exclamation-triangle"></i>
                     <span>3D Model Failed to Load</span>
-                    <button class="divine-button outline-btn" onclick="downloadModel(${JSON.stringify(model)})" style="margin-top:10px;">
+                    <button class="divine-button outline-btn fallback-download-btn">
                         <i class="fas fa-download"></i>
                         Download Instead
                     </button>
                 </div>
             `;
+            
+            // Add event listener to fallback button
+            const fallbackBtn = modelViewer.querySelector('.fallback-download-btn');
+            if (fallbackBtn) {
+                fallbackBtn.addEventListener('click', () => downloadModel(modelClone));
+            }
         });
     }
     
@@ -765,7 +788,7 @@ function convertToRawGithubUrl(url) {
 }
 
 // ==============================
-// DATABASE FUNCTIONS (for caching)
+// DATABASE FUNCTIONS
 // ==============================
 
 function initDivineDB() {
@@ -806,6 +829,133 @@ function initDivineDB() {
             console.warn('IndexedDB open blocked; close other tabs using site.');
         };
     });
+}
+
+async function cacheModelsToDB(models) {
+    if (!divineDB) return;
+    
+    return new Promise((resolve, reject) => {
+        const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
+        
+        // Clear existing data
+        const clearRequest = store.clear();
+        
+        clearRequest.onsuccess = () => {
+            console.log('💾 Clearing old cache...');
+            
+            // Add all models
+            let completed = 0;
+            const total = models.length;
+            
+            models.forEach(model => {
+                const addRequest = store.add(model);
+                addRequest.onsuccess = () => {
+                    completed++;
+                    if (completed === total) {
+                        console.log(`✅ Cached ${total} models to database`);
+                        resolve();
+                    }
+                };
+                addRequest.onerror = (e) => {
+                    console.error('Failed to cache model:', e);
+                    reject(e);
+                };
+            });
+        };
+        
+        clearRequest.onerror = (e) => {
+            console.error('Failed to clear cache:', e);
+            reject(e);
+        };
+    });
+}
+
+async function getCachedModelsFromDB() {
+    if (!divineDB) return [];
+    
+    return new Promise((resolve, reject) => {
+        const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readonly');
+        const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+            console.log(`💾 Retrieved ${request.result.length} models from database cache`);
+            resolve(request.result);
+        };
+        
+        request.onerror = (e) => {
+            console.error('Failed to get cached models:', e);
+            reject(e);
+        };
+    });
+}
+
+// ==============================
+// DOWNLOAD COUNT MANAGEMENT
+// ==============================
+
+async function updateDownloadCount(modelId) {
+    try {
+        // Update download count in localStorage
+        let downloadStats = JSON.parse(localStorage.getItem('divine_download_stats') || '{}');
+        
+        // Initialize if not exists
+        if (!downloadStats.total) downloadStats.total = 0;
+        if (!downloadStats.daily) downloadStats.daily = {};
+        
+        // Update totals
+        downloadStats.total = (downloadStats.total || 0) + 1;
+        downloadStats[modelId] = (downloadStats[modelId] || 0) + 1;
+        
+        // Update daily stats
+        const today = new Date().toISOString().split('T')[0];
+        downloadStats.daily[today] = (downloadStats.daily[today] || 0) + 1;
+        
+        // Save to localStorage
+        localStorage.setItem('divine_download_stats', JSON.stringify(downloadStats));
+        
+        // Update UI counters
+        updateDownloadCounters(downloadStats);
+        
+    } catch (error) {
+        console.error('Failed to update download count:', error);
+    }
+}
+
+function updateDownloadCounters(stats) {
+    // Update total downloads
+    if (elements.totalDownloads) {
+        elements.totalDownloads.textContent = stats.total || 0;
+    }
+    
+    // Update today's downloads
+    if (elements.todayDownloads) {
+        const today = new Date().toISOString().split('T')[0];
+        elements.todayDownloads.textContent = stats.daily?.[today] || 0;
+    }
+    
+    // Find popular model (most downloaded)
+    if (elements.popularModel && stats) {
+        let popularModelId = null;
+        let maxDownloads = 0;
+        
+        Object.entries(stats).forEach(([key, value]) => {
+            if (key !== 'total' && key !== 'daily' && typeof value === 'number') {
+                if (value > maxDownloads) {
+                    maxDownloads = value;
+                    popularModelId = key;
+                }
+            }
+        });
+        
+        if (popularModelId) {
+            const popularModel = allModels.find(m => m.id === popularModelId);
+            if (popularModel) {
+                elements.popularModel.textContent = popularModel.name;
+            }
+        }
+    }
 }
 
 // ==============================
@@ -1010,7 +1160,6 @@ function setupEventListeners() {
     // Window resize
     window.addEventListener('resize', () => {
         detectMobile();
-        initDivineParticles();
     });
     
     // Scroll animations
@@ -1077,17 +1226,53 @@ function initCosmicEffects() {
             25% { transform: translateX(-5px); }
             75% { transform: translateX(5px); }
         }
+        
+        .model-viewer-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            flex-direction: column;
+            gap: 10px;
+            padding: 20px;
+        }
+        
+        .model-viewer-fallback i {
+            font-size: 2rem;
+            color: #ff6b6b;
+        }
     `;
     document.head.appendChild(style);
 }
+
+let particlesAnimationId = null;
+let resizeHandler = null;
 
 function initDivineParticles() {
     const canvas = document.getElementById('divineCanvas');
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    
+    // Cancel existing animation if any
+    if (particlesAnimationId) {
+        cancelAnimationFrame(particlesAnimationId);
+    }
+    
+    // Remove existing resize handler
+    if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler);
+    }
+    
+    // Set canvas size
+    const resizeCanvas = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
     
     const particles = [];
     const particleCount = isMobile ? 
@@ -1131,16 +1316,19 @@ function initDivineParticles() {
             ctx.fill();
         });
         
-        requestAnimationFrame(animate);
+        particlesAnimationId = requestAnimationFrame(animate);
     }
     
     animate();
     
     // Resize handler
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    });
+    resizeHandler = () => {
+        resizeCanvas();
+        // Reinitialize particles on resize
+        initDivineParticles();
+    };
+    
+    window.addEventListener('resize', resizeHandler);
 }
 
 function animateCounters() {
@@ -1192,41 +1380,27 @@ function setupScrollAnimations() {
 }
 
 // ==============================
-// UPDATE DOWNLOAD COUNT
-// ==============================
-
-async function updateDownloadCount(modelId) {
-    try {
-        // Update download count in localStorage
-        let downloadStats = JSON.parse(localStorage.getItem('divine_download_stats') || '{}');
-        downloadStats.total = (downloadStats.total || 0) + 1;
-        downloadStats[modelId] = (downloadStats[modelId] || 0) + 1;
-        localStorage.setItem('divine_download_stats', JSON.stringify(downloadStats));
-        
-        // Update total download counter
-        const totalDownloads = downloadStats.total || 0;
-        const downloadCounter = document.querySelector('.cosmic-count[data-count="0"]');
-        if (downloadCounter && downloadCounter.parentElement.querySelector('.stat-label').textContent.includes('Downloads')) {
-            downloadCounter.textContent = totalDownloads;
-        }
-        
-    } catch (error) {
-        console.error('Failed to update download count:', error);
-    }
-}
-
-// ==============================
 // EXPORT FOR DEBUGGING
 // ==============================
 
 window.DivineCosmos = {
     config: DIVINE_CONFIG,
-    refreshState: () => refreshState,
-    models: () => allModels,
+    refreshState: () => ({ ...refreshState }),
+    models: () => [...allModels],
+    filteredModels: () => [...filteredModels],
     isMobile: () => isMobile,
     reloadModels: () => loadModelsFromGitHub(true),
     showNotification: showNotification,
-    manualRefresh: () => loadModelsFromGitHub(true)
+    manualRefresh: () => loadModelsFromGitHub(true),
+    getDownloadStats: () => JSON.parse(localStorage.getItem('divine_download_stats') || '{}'),
+    clearCache: async () => {
+        if (divineDB) {
+            const transaction = divineDB.transaction([DIVINE_CONFIG.STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(DIVINE_CONFIG.STORE_NAME);
+            await store.clear();
+            console.log('🗑️ Cache cleared');
+        }
+    }
 };
 
 console.log('✨ Divine Cosmos Script Loaded Successfully!');
