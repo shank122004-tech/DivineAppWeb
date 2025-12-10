@@ -20,9 +20,6 @@ const DIVINE_CONFIG = {
     MOBILE_BREAKPOINT: 768,
     PARTICLE_COUNT: 150,
     
-    // CORS Proxy for validation
-    CORS_PROXY: "https://api.allorigins.win/raw?url=",
-    
     // Sample models for first-time visitors
     SAMPLE_MODELS: [
         {
@@ -204,6 +201,7 @@ function cacheElements() {
         previewModelName: document.getElementById('previewModelName'),
         modelViewer: document.getElementById('modelViewer'),
         previewModelSource: document.getElementById('previewModelSource'),
+        previewModelUrl: document.getElementById('previewModelUrl'),
         previewModelDate: document.getElementById('previewModelDate'),
         previewModelTags: document.getElementById('previewModelTags'),
         previewModelDesc: document.getElementById('previewModelDesc'),
@@ -482,6 +480,13 @@ function createModelCard(model, isAdminView) {
         day: 'numeric'
     });
     
+    // URL display - NEW FEATURE
+    const urlDisplay = glbUrl ? 
+        `<div class="model-url">
+            <i class="fas fa-link"></i>
+            <span class="url-text">${truncateUrl(glbUrl, 40)}</span>
+        </div>` : '';
+    
     card.innerHTML = `
         <div class="model-preview">
             ${glbUrl ? `
@@ -503,6 +508,7 @@ function createModelCard(model, isAdminView) {
         <div class="model-info">
             <h3 class="model-name">${model.name}</h3>
             ${model.description ? `<p class="model-description">${model.description.substring(0, 80)}${model.description.length > 80 ? '...' : ''}</p>` : ''}
+            ${urlDisplay}
             <div class="model-meta">
                 <span class="meta-item">
                     <i class="fas fa-calendar"></i>
@@ -548,6 +554,16 @@ function createModelCard(model, isAdminView) {
     if (isAdminView) {
         const deleteBtn = card.querySelector('.delete-btn');
         deleteBtn.addEventListener('click', () => deleteModelFromUI(model.id));
+    }
+    
+    // Add click to copy URL functionality
+    const urlElement = card.querySelector('.model-url');
+    if (urlElement) {
+        urlElement.addEventListener('click', (e) => {
+            if (e.target.closest('.model-url')) {
+                copyToClipboard(glbUrl);
+            }
+        });
     }
     
     return card;
@@ -602,6 +618,7 @@ function previewModel(model) {
     elements.modelViewer.src = model.glbUrl;
     elements.previewModelSource.textContent = model.source === 'github' ? 'GitHub' : 
                                              model.source === 'upload' ? 'Local Upload' : 'External URL';
+    elements.previewModelUrl.textContent = model.glbUrl;
     elements.previewModelDate.textContent = new Date(model.uploadDate).toLocaleDateString();
     elements.previewModelTags.textContent = model.tags ? model.tags.join(', ') : 'No tags';
     elements.previewModelDesc.textContent = model.description || 'No description available';
@@ -678,6 +695,34 @@ async function deleteModelFromUI(modelId) {
     } catch (error) {
         console.error('Deletion failed:', error);
         showNotification('Failed to delete model', 'error');
+    }
+}
+
+// ==============================
+// URL DISPLAY FUNCTIONS
+// ==============================
+
+function truncateUrl(url, maxLength) {
+    if (url.length <= maxLength) return url;
+    
+    const start = url.substring(0, Math.floor(maxLength / 2) - 3);
+    const end = url.substring(url.length - Math.floor(maxLength / 2) + 3);
+    return start + '...' + end;
+}
+
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showNotification('URL copied to clipboard!', 'success');
+    } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('URL copied to clipboard!', 'success');
     }
 }
 
@@ -1492,7 +1537,8 @@ function filterModels(searchTerm = '') {
             (model.tags && model.tags.some(tag => 
                 tag.toLowerCase().includes(searchTerm.toLowerCase())
             )) ||
-            (model.description && model.description.toLowerCase().includes(searchTerm.toLowerCase()));
+            (model.description && model.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (model.glbUrl && model.glbUrl.toLowerCase().includes(searchTerm.toLowerCase()));
         
         return matchesSearch;
     });
@@ -1520,7 +1566,8 @@ function filterModelsAdmin(searchTerm = '', filter = 'all') {
             (model.tags && model.tags.some(tag => 
                 tag.toLowerCase().includes(searchTerm.toLowerCase())
             )) ||
-            (model.description && model.description.toLowerCase().includes(searchTerm.toLowerCase()));
+            (model.description && model.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (model.glbUrl && model.glbUrl.toLowerCase().includes(searchTerm.toLowerCase()));
         
         // Source filter
         const matchesFilter = filter === 'all' || model.source === filter;
