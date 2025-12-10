@@ -1,14 +1,26 @@
 [
   {
-    "id": 1,
-    "name": "Hanuman Gada (Divine Mace)",
+    "id": "test_model_1",
+    "name": "Divine Krishna Statue",
+    "description": "Beautiful 3D model of Lord Krishna",
     "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
     "thumbnailUrl": "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
-    "fileName": "hanuman_gada@divinemantra.glb",
-    "uploadDate": "2024-01-15T12:30:00Z",
-    "tags": ["hanuman", "hindu", "divine", "weapon", "gada", "mace", "sacred"],
-    "fileSize": 0,
-    "description": "Divine mace (gada) of Lord Hanuman, symbol of strength and devotion",
-    "source": "github"
+    "tags": ["hindu", "krishna", "divine", "statue"],
+    "uploadDate": "2024-01-15",
+    "fileSize": 4500000,
+    "rating": 4.8,
+    "downloadCount": 1250
+  },
+  {
+    "id": "test_model_2",
+    "name": "Meditation Buddha",
+    "description": "Peaceful Buddha statue",
+    "glbUrl": "https://raw.githubusercontent.com/shank122004-tech/DivineAppWeb/main/models/buddha.glb",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop",
+    "tags": ["buddha", "meditation", "peace"],
+    "uploadDate": "2024-01-14",
+    "fileSize": 3200000,
+    "rating": 4.9,
+    "downloadCount": 980
   }
 ]
