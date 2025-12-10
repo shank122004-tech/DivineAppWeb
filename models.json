@@ -1,1 +1,19 @@
+[
+  {
+    "id": "hanuman_gada",
+    "name": "Hanuman Gada",
+    "src": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
+    "thumbnail": "",
+    "tags": ["hanuman","divine"],
+    "uploadDate": "2025-12-10T12:00:00.000Z"
+  },
+  {
+    "id": "example_model",
+    "name": "Example Model",
+    "src": "https://shank122004-tech.github.io/DivineAppWeb/models/example.glb",
+    "thumbnail": "",
+    "tags": ["example"],
+    "uploadDate": "2025-12-11T09:00:00.000Z"
+  }
+]
 
