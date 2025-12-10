@@ -10,22 +10,17 @@
     <meta name="keywords" content="divine, cosmic, 3D, GLB, models, sacred, spiritual, hindu, buddha, meditation, shiva, krishna">
     <meta name="author" content="Divine Cosmic Universe">
     
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="style.css" as="style">
-    <link rel="preload" href="script.js" as="script">
-    
     <!-- External Resources -->
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    
-    <!-- Icons -->
-    <link rel="icon" type="image/x-icon" href="https://cdn.jsdelivr.net/npm/twemoji@latest/assets/svg/1f54d.svg">
     
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/x-icon" href="https://cdn.jsdelivr.net/npm/twemoji@latest/assets/svg/1f54d.svg">
     
     <!-- iOS App Icon -->
     <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/npm/twemoji@latest/assets/svg/1f54d.svg">
@@ -130,7 +125,7 @@
         <!-- Cosmic Hero Section -->
         <section class="hero cosmic-hero">
             <div class="container">
-                <div class="hero-content animate__animated animate__fadeInUp">
+                <div class="hero-content">
                     <div class="hero-badge cosmic-badge">
                         <i class="fas fa-star"></i>
                         <span>SACRED EDITION</span>
@@ -735,6 +730,10 @@
                     <div class="info-row">
                         <span class="info-label"><i class="fas fa-link"></i> Source:</span>
                         <span id="previewModelSource" class="info-value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-link"></i> GLB URL:</span>
+                        <span id="previewModelUrl" class="info-value url-display"></span>
                     </div>
                     <div class="info-row">
                         <span class="info-label"><i class="fas fa-calendar"></i> Added:</span>
