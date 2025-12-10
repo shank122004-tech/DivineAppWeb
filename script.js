@@ -1773,6 +1773,157 @@ window.DivineCosmos = {
     reloadModels: loadAndRenderModels,
     showNotification: showNotification
 };
+// ==============================
+// AUTOMATIC MODEL LOADER
+// ==============================
 
+async function autoLoadModels() {
+    try {
+        // Show loading
+        showLoading(true);
+        
+        // 1. Load models from models.json
+        const response = await fetch('models.json');
+        if (!response.ok) {
+            throw new Error(`Failed to load models.json`);
+        }
+        
+        const models = await response.json();
+        
+        // 2. Get container
+        const grid = document.getElementById('modelsGrid');
+        if (!grid) return;
+        
+        // 3. Clear loading/empty states
+        grid.innerHTML = '';
+        
+        // 4. Create and display each model card
+        models.forEach((model, index) => {
+            const card = document.createElement('div');
+            card.className = 'divine-card model-card fade-in-up';
+            card.style.animationDelay = `${index * 0.1}s`;
+            
+            // Default values
+            const thumbnail = model.thumbnailUrl || 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop';
+            const tags = model.tags || ['divine'];
+            const desc = model.description || 'Divine 3D Model';
+            const fileSize = model.fileSize ? formatFileSize(model.fileSize) : 'Unknown';
+            
+            card.innerHTML = `
+                <div class="model-preview">
+                    <img src="${thumbnail}" alt="${model.name}" loading="lazy">
+                    <div class="model-source-badge">
+                        <i class="fab fa-github"></i> Auto Loaded
+                    </div>
+                </div>
+                <div class="model-info">
+                    <h3 class="model-name">${model.name}</h3>
+                    <p class="model-description">${desc}</p>
+                    
+                    <div class="model-url-display">
+                        <i class="fas fa-link"></i>
+                        <span>${model.glbUrl.substring(0, 40)}...</span>
+                    </div>
+                    
+                    <div class="model-meta">
+                        <span class="meta-item">
+                            <i class="fas fa-tags"></i>
+                            ${tags.join(', ')}
+                        </span>
+                        <span class="meta-item">
+                            <i class="fas fa-weight"></i>
+                            ${fileSize}
+                        </span>
+                    </div>
+                </div>
+                <div class="model-actions">
+                    <a href="${model.glbUrl}" 
+                       download="${model.name.replace(/\s+/g, '_')}.glb" 
+                       class="divine-button cosmic-btn">
+                        <i class="fas fa-download"></i>
+                        Download GLB
+                    </a>
+                    <button class="divine-button outline-btn copy-url-btn" data-url="${model.glbUrl}">
+                        <i class="fas fa-copy"></i>
+                        Copy URL
+                    </button>
+                </div>
+            `;
+            
+            // Add click to copy URL
+            card.querySelector('.copy-url-btn').addEventListener('click', function() {
+                navigator.clipboard.writeText(model.glbUrl);
+                showNotification('URL copied to clipboard!', 'success');
+            });
+            
+            grid.appendChild(card);
+        });
+        
+        // 5. Update counter
+        updateModelCount(models.length);
+        
+        // 6. Hide loading
+        showLoading(false);
+        
+        showNotification(`Loaded ${models.length} divine models`, 'success');
+        
+    } catch (error) {
+        console.error('Auto-load failed:', error);
+        showNotification('Could not load models', 'error');
+        showLoading(false);
+    }
+}
+
+// Helper function
+function formatFileSize(bytes) {
+    if (!bytes) return 'Unknown';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Helper function to show/hide loading
+function showLoading(show) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = show ? 'flex' : 'none';
+}
+
+// Helper function for notifications
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notificationContainer');
+    if (!container) return;
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i>
+            ${message}
+        </div>
+    `;
+    
+    container.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Helper function to update counter
+function updateModelCount(count) {
+    const counter = document.querySelector('.cosmic-count[data-count]');
+    if (counter) counter.textContent = count;
+}
+
+// ==============================
+// AUTOMATIC INITIALIZATION
+// ==============================
+
+// Add this at the VERY END of your script.js file (after all other code):
+document.addEventListener('DOMContentLoaded', () => {
+    // Remove or comment out ALL other initialization code
+    
+    // Add this single line:
+    autoLoadModels();
+});
 console.log('✨ Divine Cosmos Script Loaded Successfully!');
+
 
