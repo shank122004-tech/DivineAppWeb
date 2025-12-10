@@ -1,510 +1,385 @@
-// Divine 3D Models Gallery - Complete JavaScript
+// script.js
+'use strict';
 
 // Configuration
 const CONFIG = {
-    GITHUB_USERNAME: "shank122004-tech",
-    GITHUB_REPO: "DivineAppWeb",
-    MODELS_JSON_URL: "https://github.com/shank122004-tech/DivineAppWeb/models.json",
-    
-    // Backend API URLs
-    BACKEND_URL: "https://your-backend-url.com",
-    REQUEST_UPLOAD_ENDPOINT: "/api/request-upload",
-    COMPLETE_UPLOAD_ENDPOINT: "/api/complete-upload",
-    
-    // Auto-refresh settings
-    AUTO_REFRESH_INTERVAL: 20000, // 20 seconds
-    RETRY_DELAY: 5000, // 5 seconds for retry
-    
-    // UI Settings
-    MAX_MODELS: 100,
-    ITEMS_PER_ROW: 4,
-    MOBILE_BREAKPOINT: 768,
-    
-    // Default models for initial state
-    DEFAULT_MODELS: [
-  {
-    "id": "test_model_1",
-    "name": "Divine Krishna Statue",
-    "description": "Beautiful 3D model of Lord Krishna",
-    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
-    "thumbnailUrl": "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
-    "tags": ["hindu", "krishna", "divine", "statue"],
-    "uploadDate": "2024-01-15",
-    "fileSize": 4500000,
-    "rating": 4.8,
-    "downloadCount": 1250
-  },
-  {
-    "id": "test_model_1",
-    "name": "Divine Krishna Statue",
-    "description": "Beautiful 3D model of Lord Krishna",
-    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
-    "thumbnailUrl": "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
-    "tags": ["hindu", "krishna", "divine", "statue"],
-    "uploadDate": "2024-01-15",
-    "fileSize": 4500000,
-    "rating": 4.8,
-    "downloadCount": 1250
-  },
-        {
-            id: "sample-3",
-            name: "Sacred Mandala",
-            filename: "mandala_sacred.glb",
-            url: "https://github.com/your-username/your-repo/raw/main/models/mandala.glb",
-            thumbnail: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop",
-            category: "mandala",
-            description: "Intricate sacred mandala pattern for spiritual visualization",
-            source: "github",
-            uploadDate: new Date().toISOString()
-        }
-    ]
+    MODELS_JSON_URL: 'https://raw.githubusercontent.com/shank122004-tech/DivineAppWeb/refs/heads/main/models.json',
+    REFRESH_INTERVAL: 15000, // 15 seconds
+    ADMIN_PASSWORD: 'admin123',
+    GITHUB_REPO: 'shank122004-tech/DivineAppWeb',
+    JSON_PATH: 'models.json',
+    LOCAL_STORAGE_KEY: 'divine3d_gallery_data'
 };
 
-// Global State
-let state = {
+// State Management
+const State = {
     models: [],
+    categories: new Set(),
     filteredModels: [],
-    categories: new Set(['all']),
+    currentCategory: 'all',
     searchQuery: '',
-    selectedCategory: 'all',
-    sortBy: 'name',
+    sortBy: 'name-asc',
+    isAdmin: false,
+    isInitialized: false,
     isLoading: false,
-    lastUpdate: null,
-    currentUpload: null,
-    autoRefreshInterval: null,
-    retryCount: 0,
-    maxRetries: 3
+    refreshInterval: null,
+    currentPreviewModel: null
 };
 
-// DOM Elements Cache
-let elements = {};
+// DOM Elements
+const Elements = {
+    // Header
+    themeToggle: document.getElementById('themeToggle'),
+    adminBtn: document.getElementById('adminBtn'),
+    adminOverlay: document.getElementById('adminOverlay'),
+    refreshBtn: document.getElementById('refreshBtn'),
+    searchInput: document.getElementById('searchInput'),
+    searchBtn: document.getElementById('searchBtn'),
+    navToggle: document.getElementById('navToggle'),
+    navLinks: document.getElementById('navLinks'),
+    mainHeader: document.querySelector('.main-header'),
+
+    // Hero
+    totalModels: document.getElementById('totalModels'),
+    totalCategories: document.getElementById('totalCategories'),
+
+    // Gallery
+    galleryContainer: document.getElementById('galleryContainer'),
+    gallerySearch: document.getElementById('gallerySearch'),
+    categoryFilter: document.getElementById('categoryFilter'),
+    clearFilters: document.getElementById('clearFilters'),
+    sortSelect: document.getElementById('sortSelect'),
+    loadingIndicator: document.getElementById('loadingIndicator'),
+    noResults: document.getElementById('noResults'),
+
+    // Categories
+    categoriesContainer: document.getElementById('categoriesContainer'),
+    categoryControls: document.querySelector('.category-controls'),
+
+    // Preview Modal
+    previewModal: document.getElementById('previewModal'),
+    closePreview: document.getElementById('closePreview'),
+    previewViewer: document.getElementById('previewViewer'),
+    previewTitle: document.getElementById('previewTitle'),
+    previewName: document.getElementById('previewName'),
+    previewCategory: document.getElementById('previewCategory'),
+    previewDescription: document.getElementById('previewDescription'),
+    downloadModel: document.getElementById('downloadModel'),
+    copyUrl: document.getElementById('copyUrl'),
+    shareModel: document.getElementById('shareModel'),
+    rotateToggle: document.getElementById('rotateToggle'),
+    fullscreenToggle: document.getElementById('fullscreenToggle'),
+    arToggle: document.getElementById('arToggle'),
+
+    // Admin Panel
+    closeAdmin: document.getElementById('closeAdmin'),
+    adminLogin: document.getElementById('adminLogin'),
+    adminDashboard: document.getElementById('adminDashboard'),
+    adminPassword: document.getElementById('adminPassword'),
+    loginBtn: document.getElementById('loginBtn'),
+    logoutBtn: document.getElementById('logoutBtn'),
+    adminStatus: document.getElementById('adminStatus'),
+    tabBtns: document.querySelectorAll('.tab-btn'),
+    tabPanes: document.querySelectorAll('.tab-pane'),
+
+    // Admin Forms
+    uploadArea: document.getElementById('uploadArea'),
+    modelFile: document.getElementById('modelFile'),
+    modelName: document.getElementById('modelName'),
+    modelDescription: document.getElementById('modelDescription'),
+    modelCategory: document.getElementById('modelCategory'),
+    modelTags: document.getElementById('modelTags'),
+    thumbnailUrl: document.getElementById('thumbnailUrl'),
+    addModelBtn: document.getElementById('addModelBtn'),
+    previewModel: document.getElementById('previewModel'),
+    adminModelsList: document.getElementById('adminModelsList'),
+    githubUrl: document.getElementById('githubUrl'),
+    githubToken: document.getElementById('githubToken'),
+    jsonPath: document.getElementById('jsonPath'),
+    pullJsonBtn: document.getElementById('pullJsonBtn'),
+    pushJsonBtn: document.getElementById('pushJsonBtn'),
+    githubStatus: document.getElementById('githubStatus'),
+
+    // Toast
+    toastContainer: document.getElementById('toastContainer'),
+
+    // FAB
+    fabBtn: document.getElementById('fabBtn'),
+
+    // Loading Screen
+    loadingScreen: document.getElementById('loadingScreen')
+};
 
 // Initialize Application
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Initializing Divine 3D Models Gallery...');
-    
+async function init() {
     try {
-        // Cache DOM elements
-        cacheElements();
+        // Load data from localStorage first
+        loadFromLocalStorage();
         
-        // Initialize UI
-        initializeUI();
-        
-        // Set up event listeners
+        // Setup event listeners
         setupEventListeners();
-        
-        // Load initial models
-        await loadModels();
         
         // Start auto-refresh
         startAutoRefresh();
         
-        // Update time display
-        updateCurrentTime();
-        setInterval(updateCurrentTime, 1000);
+        // Load initial data
+        await loadModels();
         
-        console.log('✅ Application initialized successfully');
+        // Update UI
+        updateStats();
+        populateCategories();
+        renderModels();
+        
+        // Hide loading screen
+        setTimeout(() => {
+            Elements.loadingScreen.style.opacity = '0';
+            Elements.loadingScreen.style.visibility = 'hidden';
+        }, 500);
+        
+        State.isInitialized = true;
+        
+        // Show welcome message
+        showToast('Welcome to Divine 3D Gallery!', 'success');
         
     } catch (error) {
-        console.error('❌ Failed to initialize application:', error);
-        showNotification('Failed to initialize application', 'error');
+        console.error('Initialization error:', error);
+        showToast('Failed to initialize gallery', 'error');
+        
+        // Hide loading screen on error too
+        Elements.loadingScreen.style.opacity = '0';
+        Elements.loadingScreen.style.visibility = 'hidden';
     }
-});
-
-// Cache DOM Elements
-function cacheElements() {
-    elements = {
-        // Loading
-        loadingOverlay: document.getElementById('loadingOverlay'),
-        
-        // Header
-        refreshTimer: document.getElementById('refreshTimer'),
-        totalModels: document.getElementById('totalModels'),
-        quickUploadBtn: document.getElementById('quickUploadBtn'),
-        
-        // Hero Section
-        jsonSourceDisplay: document.getElementById('jsonSourceDisplay'),
-        lastUpdateDisplay: document.getElementById('lastUpdateDisplay'),
-        
-        // Upload Section
-        modelName: document.getElementById('modelName'),
-        modelCategory: document.getElementById('modelCategory'),
-        modelDescription: document.getElementById('modelDescription'),
-        modelFile: document.getElementById('modelFile'),
-        fileUploadArea: document.getElementById('fileUploadArea'),
-        browseFileBtn: document.getElementById('browseFileBtn'),
-        fileName: document.getElementById('fileName'),
-        fileSize: document.getElementById('fileSize'),
-        fileInfo: document.getElementById('fileInfo'),
-        uploadBtn: document.getElementById('uploadBtn'),
-        cancelUploadBtn: document.getElementById('cancelUploadBtn'),
-        uploadProgress: document.getElementById('uploadProgress'),
-        progressFill: document.getElementById('progressFill'),
-        progressText: document.getElementById('progressText'),
-        progressPercent: document.getElementById('progressPercent'),
-        
-        // Search and Filter
-        searchInput: document.getElementById('searchInput'),
-        clearSearch: document.getElementById('clearSearch'),
-        categoryFilter: document.getElementById('categoryFilter'),
-        sortBy: document.getElementById('sortBy'),
-        refreshBtn: document.getElementById('refreshBtn'),
-        
-        // Models Grid
-        modelsGrid: document.getElementById('modelsGrid'),
-        emptyState: document.getElementById('emptyState'),
-        loadingState: document.getElementById('loadingState'),
-        visibleModels: document.getElementById('visibleModels'),
-        totalModelsCount: document.getElementById('totalModelsCount'),
-        loadSampleBtn: document.getElementById('loadSampleBtn'),
-        
-        // Info Panel
-        lastChecked: document.getElementById('lastChecked'),
-        nextRefresh: document.getElementById('nextRefresh'),
-        jsonSource: document.getElementById('jsonSource'),
-        lastUpdateTime: document.getElementById('lastUpdateTime'),
-        
-        // Footer
-        currentTime: document.getElementById('currentTime'),
-        
-        // Modals
-        previewModal: document.getElementById('previewModal'),
-        modelViewer: document.getElementById('modelViewer'),
-        modalTitle: document.getElementById('modalTitle'),
-        modelInfoName: document.getElementById('modelInfoName'),
-        modelInfoCategory: document.getElementById('modelInfoCategory'),
-        modelInfoDesc: document.getElementById('modelInfoDesc'),
-        modelInfoSource: document.getElementById('modelInfoSource'),
-        modelInfoFileName: document.getElementById('modelInfoFileName'),
-        modelInfoUrl: document.getElementById('modelInfoUrl'),
-        closeModal: document.getElementById('closeModal'),
-        downloadBtn: document.getElementById('downloadBtn'),
-        copyUrlBtn: document.getElementById('copyUrlBtn'),
-        closePreviewBtn: document.getElementById('closePreviewBtn'),
-        
-        // Upload Success Modal
-        uploadSuccessModal: document.getElementById('uploadSuccessModal'),
-        uploadedModelName: document.getElementById('uploadedModelName'),
-        uploadedCategory: document.getElementById('uploadedCategory'),
-        uploadedFileName: document.getElementById('uploadedFileName'),
-        
-        // Notifications
-        notifications: document.getElementById('notifications')
-    };
 }
 
-// Initialize UI
-function initializeUI() {
-    // Hide loading overlay after 1 second
-    setTimeout(() => {
-        elements.loadingOverlay.style.opacity = '0';
-        setTimeout(() => {
-            elements.loadingOverlay.style.display = 'none';
-        }, 300);
-    }, 1000);
-    
-    // Initialize file upload area
-    elements.fileUploadArea.addEventListener('click', () => elements.modelFile.click());
-    elements.fileUploadArea.addEventListener('dragover', handleDragOver);
-    elements.fileUploadArea.addEventListener('drop', handleFileDrop);
-    elements.browseFileBtn.addEventListener('click', () => elements.modelFile.click());
-    
-    // Update UI state
-    updateRefreshTimer();
-    updateLastUpdateTime();
-}
-
-// Set up Event Listeners
-function setupEventListeners() {
-    // Search
-    elements.searchInput.addEventListener('input', handleSearch);
-    elements.clearSearch.addEventListener('click', clearSearch);
-    
-    // Filter and Sort
-    elements.categoryFilter.addEventListener('change', handleCategoryFilter);
-    elements.sortBy.addEventListener('change', handleSortChange);
-    
-    // Refresh Button
-    elements.refreshBtn.addEventListener('click', () => loadModels(true));
-    
-    // Upload
-    elements.modelFile.addEventListener('change', handleFileSelect);
-    elements.uploadBtn.addEventListener('click', handleUpload);
-    elements.cancelUploadBtn.addEventListener('click', resetUploadForm);
-    elements.quickUploadBtn.addEventListener('click', () => {
-        elements.fileUploadArea.scrollIntoView({ behavior: 'smooth' });
-        elements.modelName.focus();
-    });
-    
-    // Sample Models
-    elements.loadSampleBtn.addEventListener('click', loadSampleModels);
-    
-    // Modal
-    elements.closeModal.addEventListener('click', closePreviewModal);
-    elements.closePreviewBtn.addEventListener('click', closePreviewModal);
-    elements.downloadBtn.addEventListener('click', downloadCurrentModel);
-    elements.copyUrlBtn.addEventListener('click', copyModelUrl);
-    
-    // Close modals on outside click
-    window.addEventListener('click', (e) => {
-        if (e.target === elements.previewModal) {
-            closePreviewModal();
-        }
-        if (e.target === elements.uploadSuccessModal) {
-            closeUploadSuccessModal();
-        }
-    });
-    
-    // Escape key to close modals
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closePreviewModal();
-            closeUploadSuccessModal();
-        }
-    });
-    
-    // Window resize
-    window.addEventListener('resize', handleResize);
-}
-
-// Load Models from GitHub
-async function loadModels(forceRefresh = false) {
-    if (state.isLoading && !forceRefresh) return;
-    
+// Data Loading Functions
+async function loadModels() {
     try {
-        state.isLoading = true;
-        showLoadingState(true);
+        State.isLoading = true;
+        updateLoadingIndicator(true);
         
-        console.log('🌐 Fetching models from GitHub...');
-        
-        // Add cache busting for force refresh
-        const url = forceRefresh 
-            ? `${CONFIG.MODELS_JSON_URL}?_=${Date.now()}`
-            : CONFIG.MODELS_JSON_URL;
-        
-        const response = await fetch(url);
+        const response = await fetch(CONFIG.MODELS_JSON_URL);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        const models = await response.json();
+        const data = await response.json();
         
-        if (!Array.isArray(models)) {
-            throw new Error('Invalid JSON format: Expected array of models');
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid data format: expected array');
         }
         
-        // Process models
-        await processModels(models);
+        // Validate and process models
+        State.models = data.map(model => ({
+            id: model.id || generateId(),
+            name: model.name || 'Unnamed Model',
+            description: model.description || '',
+            category: model.category || 'Uncategorized',
+            tags: Array.isArray(model.tags) ? model.tags : [],
+            glbUrl: convertToRawGithubUrl(model.glbUrl),
+            thumbnailUrl: convertToRawGithubUrl(model.thumbnailUrl),
+            createdAt: model.createdAt || new Date().toISOString(),
+            updatedAt: model.updatedAt || new Date().toISOString()
+        })).filter(model => model.glbUrl); // Filter out models without GLB URL
         
-        // Update state
-        state.lastUpdate = new Date();
-        state.retryCount = 0;
+        // Update categories
+        State.categories.clear();
+        State.models.forEach(model => {
+            if (model.category) {
+                State.categories.add(model.category);
+            }
+        });
         
-        // Update UI
-        updateLastUpdateTime();
-        updateModelCount();
-        updateCategories();
-        filterAndRenderModels();
+        // Save to localStorage
+        saveToLocalStorage();
         
-        // Show success notification
-        if (forceRefresh) {
-            showNotification(`${models.length} models loaded successfully`, 'success');
-        }
+        // Update filtered models
+        filterAndSortModels();
         
-        console.log(`✅ Loaded ${models.length} models from GitHub`);
+        State.isLoading = false;
+        updateLoadingIndicator(false);
+        
+        console.log(`Loaded ${State.models.length} models`);
         
     } catch (error) {
-        console.error('❌ Failed to load models:', error);
+        console.error('Error loading models:', error);
+        showToast(`Failed to load models: ${error.message}`, 'error');
         
-        // Retry logic
-        if (state.retryCount < state.maxRetries) {
-            state.retryCount++;
-            console.log(`🔄 Retrying... (${state.retryCount}/${state.maxRetries})`);
-            
-            setTimeout(() => loadModels(forceRefresh), CONFIG.RETRY_DELAY);
-            showNotification(`Failed to load models. Retrying... (${state.retryCount}/${state.maxRetries})`, 'warning');
-        } else {
-            // Show error and load sample models
-            showNotification('Failed to load models from GitHub. Loading sample models.', 'error');
-            loadSampleModels();
+        // Fallback to localStorage if available
+        if (State.models.length === 0 && localStorage.getItem(CONFIG.LOCAL_STORAGE_KEY)) {
+            showToast('Using cached data', 'info');
         }
         
-    } finally {
-        state.isLoading = false;
-        showLoadingState(false);
+        State.isLoading = false;
+        updateLoadingIndicator(false);
     }
 }
 
-// Process Models
-async function processModels(models) {
-    // Validate and normalize models
-    const processedModels = models.map(model => ({
-        id: model.id || `model-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: model.name || 'Unnamed Model',
-        filename: model.filename || `${model.name.replace(/\s+/g, '_').toLowerCase()}.glb`,
-        url: convertToRawGithubUrl(model.url || ''),
-        thumbnail: model.thumbnail || getDefaultThumbnail(model.category),
-        category: model.category || 'other',
-        description: model.description || 'No description available',
-        source: model.source || 'github',
-        uploadDate: model.uploadDate || new Date().toISOString()
-    })).filter(model => model.url); // Filter out models without URLs
-    
-    // Update state
-    state.models = processedModels;
-    state.filteredModels = [...processedModels];
-    
-    // Update categories
-    processedModels.forEach(model => {
-        state.categories.add(model.category);
-    });
+function loadFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem(CONFIG.LOCAL_STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            State.models = data.models || [];
+            State.categories = new Set(data.categories || []);
+            State.isAdmin = data.isAdmin || false;
+            
+            // Update admin UI if needed
+            if (State.isAdmin) {
+                showAdminDashboard();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+    }
 }
 
-// Convert GitHub URL to Raw URL
+function saveToLocalStorage() {
+    try {
+        const data = {
+            models: State.models,
+            categories: Array.from(State.categories),
+            isAdmin: State.isAdmin,
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem(CONFIG.LOCAL_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
+}
+
+// GitHub URL Normalizer
 function convertToRawGithubUrl(url) {
     if (!url) return '';
     
-    try {
-        // If already a raw URL, return as is
-        if (url.includes('raw.githubusercontent.com')) {
-            return url;
-        }
-        
-        // Convert GitHub blob URL to raw URL
-        if (url.includes('github.com') && url.includes('/blob/')) {
-            return url
-                .replace('github.com', 'raw.githubusercontent.com')
-                .replace('/blob/', '/');
-        }
-        
-        // Convert GitHub pages URL to raw URL
-        if (url.includes('.github.io')) {
-            const urlObj = new URL(url);
-            const pathParts = urlObj.pathname.split('/').filter(p => p);
-            const repo = pathParts[0] || CONFIG.GITHUB_REPO;
-            const filePath = pathParts.slice(1).join('/');
-            
-            return `https://raw.githubusercontent.com/${CONFIG.GITHUB_USERNAME}/${repo}/main/${filePath}`;
-        }
-        
-        return url;
-    } catch (error) {
-        console.error('Error converting GitHub URL:', error);
+    // Already raw URL
+    if (url.includes('raw.githubusercontent.com')) {
         return url;
     }
-}
-
-// Get Default Thumbnail
-function getDefaultThumbnail(category) {
-    const thumbnails = {
-        hindu: 'https://images.unsplash.com/photo-1604617880299-c9c2f8a8f8b5?w=400&h=300&fit=crop',
-        buddha: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
-        sacred: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
-        meditation: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
-        symbol: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop',
-        statue: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
-        mandala: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop',
-        other: 'https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?w=400&h=300&fit=crop'
-    };
     
-    return thumbnails[category] || thumbnails.other;
-}
-
-// Filter and Render Models
-function filterAndRenderModels() {
-    let filtered = [...state.models];
-    
-    // Apply search filter
-    if (state.searchQuery) {
-        const query = state.searchQuery.toLowerCase();
-        filtered = filtered.filter(model =>
-            model.name.toLowerCase().includes(query) ||
-            model.description.toLowerCase().includes(query) ||
-            model.category.toLowerCase().includes(query)
-        );
+    // GitHub blob URL
+    if (url.includes('github.com') && url.includes('/blob/')) {
+        return url
+            .replace('github.com', 'raw.githubusercontent.com')
+            .replace('/blob/', '/');
     }
     
-    // Apply category filter
-    if (state.selectedCategory !== 'all') {
-        filtered = filtered.filter(model => model.category === state.selectedCategory);
+    // GitHub gist URL
+    if (url.includes('gist.github.com')) {
+        return url.replace('gist.github.com', 'gist.githubusercontent.com') + '/raw';
     }
     
-    // Apply sorting
-    filtered.sort((a, b) => {
-        switch (state.sortBy) {
-            case 'name':
-                return a.name.localeCompare(b.name);
-            case 'name-desc':
-                return b.name.localeCompare(a.name);
-            case 'newest':
-                return new Date(b.uploadDate) - new Date(a.uploadDate);
-            case 'category':
-                return a.category.localeCompare(b.category) || a.name.localeCompare(b.name);
-            default:
-                return 0;
-        }
+    // Return as-is for other URLs
+    return url;
+}
+
+// UI Update Functions
+function updateStats() {
+    Elements.totalModels.textContent = State.models.length;
+    Elements.totalCategories.textContent = State.categories.size;
+}
+
+function populateCategories() {
+    // Clear existing
+    Elements.categoriesContainer.innerHTML = '';
+    Elements.categoryFilter.innerHTML = '<option value="all">All Categories</option>';
+    
+    // Add category cards
+    State.categories.forEach(category => {
+        const count = State.models.filter(m => m.category === category).length;
+        
+        // Category card
+        const card = document.createElement('div');
+        card.className = 'category-card';
+        card.innerHTML = `
+            <div class="category-icon">🎨</div>
+            <div class="category-name">${category}</div>
+            <div class="category-count">${count} models</div>
+        `;
+        card.onclick = () => filterByCategory(category);
+        Elements.categoriesContainer.appendChild(card);
+        
+        // Filter option
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = `${category} (${count})`;
+        Elements.categoryFilter.appendChild(option);
     });
     
-    // Limit to max models
-    filtered = filtered.slice(0, CONFIG.MAX_MODELS);
+    // Add category buttons
+    Elements.categoryControls.innerHTML = '';
     
-    // Update state
-    state.filteredModels = filtered;
+    const allBtn = document.createElement('button');
+    allBtn.className = 'category-btn active';
+    allBtn.textContent = 'All Models';
+    allBtn.onclick = () => filterByCategory('all');
+    Elements.categoryControls.appendChild(allBtn);
     
-    // Render models
-    renderModels(filtered);
-    
-    // Update UI
-    updateVisibleModelCount();
-    toggleEmptyState(filtered.length === 0);
+    State.categories.forEach(category => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn';
+        btn.textContent = category;
+        btn.onclick = () => filterByCategory(category);
+        Elements.categoryControls.appendChild(btn);
+    });
 }
 
-// Render Models to Grid
-function renderModels(models) {
-    elements.modelsGrid.innerHTML = '';
+function renderModels() {
+    if (State.isLoading) return;
     
-    if (models.length === 0) {
+    Elements.galleryContainer.innerHTML = '';
+    
+    if (State.filteredModels.length === 0) {
+        Elements.noResults.style.display = 'block';
+        Elements.loadingIndicator.style.display = 'none';
         return;
     }
     
-    models.forEach((model, index) => {
+    Elements.noResults.style.display = 'none';
+    
+    const grid = document.createElement('div');
+    grid.className = 'models-grid';
+    
+    State.filteredModels.forEach((model, index) => {
         const card = createModelCard(model, index);
-        elements.modelsGrid.appendChild(card);
+        grid.appendChild(card);
     });
+    
+    Elements.galleryContainer.appendChild(grid);
 }
 
-// Create Model Card
 function createModelCard(model, index) {
     const card = document.createElement('div');
     card.className = 'model-card';
-    card.dataset.id = model.id;
-    
-    // Add animation delay for staggered entrance
     card.style.animationDelay = `${index * 0.1}s`;
     
-    // Create card HTML
+    // Thumbnail or placeholder
+    const thumbnail = model.thumbnailUrl 
+        ? `<img src="${model.thumbnailUrl}" alt="${model.name}" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'thumbnail-placeholder\\'>🎨</div>'">`
+        : '<div class="thumbnail-placeholder">🎨</div>';
+    
     card.innerHTML = `
-        <div class="model-image">
-            ${model.thumbnail ? 
-                `<img src="${model.thumbnail}" alt="${model.name}" loading="lazy">` :
-                `<i class="fas fa-cube"></i>`
-            }
+        <div class="model-thumbnail">
+            ${thumbnail}
             <span class="model-badge">${model.category}</span>
         </div>
         <div class="model-content">
-            <h3>${model.name}</h3>
+            <div class="model-header">
+                <h4 class="model-title">${model.name}</h4>
+                <span class="model-category">${model.category}</span>
+            </div>
             <p class="model-description">${model.description}</p>
             <div class="model-meta">
-                <span class="model-category">${model.category}</span>
-                <div class="model-actions">
-                    <button class="model-action-btn preview-btn" title="Preview 3D">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="model-action-btn download-btn" title="Download GLB">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>
+                <span>GLB</span>
+                <span>${formatDate(model.createdAt)}</span>
+            </div>
+            <div class="model-actions">
+                <button class="action-btn preview-btn">
+                    <i class="fas fa-eye"></i> Preview
+                </button>
+                <button class="action-btn download-btn">
+                    <i class="fas fa-download"></i> Download
+                </button>
             </div>
         </div>
     `;
@@ -513,570 +388,755 @@ function createModelCard(model, index) {
     const previewBtn = card.querySelector('.preview-btn');
     const downloadBtn = card.querySelector('.download-btn');
     
-    previewBtn.addEventListener('click', (e) => {
+    previewBtn.onclick = (e) => {
         e.stopPropagation();
-        previewModel(model);
-    });
+        openPreview(model);
+    };
     
-    downloadBtn.addEventListener('click', (e) => {
+    downloadBtn.onclick = (e) => {
         e.stopPropagation();
         downloadModel(model);
-    });
+    };
     
-    card.addEventListener('click', () => previewModel(model));
+    card.onclick = () => openPreview(model);
     
     return card;
 }
 
-// Preview Model
-function previewModel(model) {
+function updateLoadingIndicator(show) {
+    if (show) {
+        Elements.loadingIndicator.style.display = 'flex';
+        Elements.refreshBtn.classList.add('loading');
+    } else {
+        Elements.loadingIndicator.style.display = 'none';
+        Elements.refreshBtn.classList.remove('loading');
+    }
+}
+
+// Filter and Sort Functions
+function filterAndSortModels() {
+    let filtered = [...State.models];
+    
+    // Apply search filter
+    if (State.searchQuery) {
+        const query = State.searchQuery.toLowerCase();
+        filtered = filtered.filter(model => 
+            model.name.toLowerCase().includes(query) ||
+            model.description.toLowerCase().includes(query) ||
+            model.category.toLowerCase().includes(query) ||
+            model.tags.some(tag => tag.toLowerCase().includes(query))
+        );
+    }
+    
+    // Apply category filter
+    if (State.currentCategory !== 'all') {
+        filtered = filtered.filter(model => model.category === State.currentCategory);
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+        switch (State.sortBy) {
+            case 'name-asc':
+                return a.name.localeCompare(b.name);
+            case 'name-desc':
+                return b.name.localeCompare(a.name);
+            case 'date-new':
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            case 'date-old':
+                return new Date(a.createdAt) - new Date(b.createdAt);
+            default:
+                return 0;
+        }
+    });
+    
+    State.filteredModels = filtered;
+    renderModels();
+}
+
+function filterByCategory(category) {
+    State.currentCategory = category;
+    
+    // Update active button
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if ((category === 'all' && btn.textContent === 'All Models') || 
+            btn.textContent === category) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Update filter select
+    Elements.categoryFilter.value = category;
+    
+    filterAndSortModels();
+    scrollToSection('gallery');
+}
+
+function searchModels(query) {
+    State.searchQuery = query;
+    filterAndSortModels();
+}
+
+function sortModels(sortBy) {
+    State.sortBy = sortBy;
+    filterAndSortModels();
+}
+
+// Preview Modal Functions
+function openPreview(model) {
+    State.currentPreviewModel = model;
+    
     // Update modal content
-    elements.modalTitle.textContent = model.name;
-    elements.modelInfoName.textContent = model.name;
-    elements.modelInfoCategory.textContent = model.category;
-    elements.modelInfoDesc.textContent = model.description;
-    elements.modelInfoSource.textContent = model.source;
-    elements.modelInfoFileName.textContent = model.filename;
-    elements.modelInfoUrl.textContent = model.url;
+    Elements.previewTitle.textContent = model.name;
+    Elements.previewName.textContent = model.name;
+    Elements.previewCategory.textContent = model.category;
+    Elements.previewDescription.textContent = model.description || 'No description available.';
     
-    // Set model viewer source
-    elements.modelViewer.src = model.url;
-    
-    // Store current model for download
-    elements.downloadBtn.dataset.modelId = model.id;
-    elements.copyUrlBtn.dataset.modelUrl = model.url;
+    // Load model in viewer
+    Elements.previewViewer.src = model.glbUrl;
     
     // Show modal
-    elements.previewModal.classList.add('active');
+    Elements.previewModal.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
-// Close Preview Modal
-function closePreviewModal() {
-    elements.previewModal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-    elements.modelViewer.src = '';
+function closePreview() {
+    Elements.previewModal.classList.remove('active');
+    document.body.style.overflow = '';
+    Elements.previewViewer.src = '';
+    State.currentPreviewModel = null;
 }
 
-// Download Current Model
-function downloadCurrentModel() {
-    const modelId = elements.downloadBtn.dataset.modelId;
-    const model = state.models.find(m => m.id === modelId);
-    
-    if (model) {
-        downloadModel(model);
-    }
-}
-
-// Download Model
-function downloadModel(model) {
+// Model Download Functions
+async function downloadModel(model) {
     try {
-        // Create download link
-        const link = document.createElement('a');
-        link.href = model.url;
-        link.download = model.filename;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
+        showToast(`Downloading ${model.name}...`, 'info');
         
-        // Trigger download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const response = await fetch(model.glbUrl);
         
-        // Show notification
-        showNotification(`Downloading ${model.name}...`, 'success');
-        
-    } catch (error) {
-        console.error('Download failed:', error);
-        showNotification('Download failed. Please try again.', 'error');
-    }
-}
-
-// Copy Model URL
-function copyModelUrl() {
-    const url = elements.copyUrlBtn.dataset.modelUrl;
-    
-    navigator.clipboard.writeText(url)
-        .then(() => {
-            showNotification('URL copied to clipboard!', 'success');
-        })
-        .catch(err => {
-            console.error('Failed to copy URL:', err);
-            showNotification('Failed to copy URL', 'error');
-        });
-}
-
-// Handle Search
-function handleSearch(e) {
-    state.searchQuery = e.target.value.trim();
-    filterAndRenderModels();
-    
-    // Show/hide clear button
-    elements.clearSearch.style.display = state.searchQuery ? 'block' : 'none';
-}
-
-// Clear Search
-function clearSearch() {
-    elements.searchInput.value = '';
-    state.searchQuery = '';
-    filterAndRenderModels();
-    elements.clearSearch.style.display = 'none';
-}
-
-// Handle Category Filter
-function handleCategoryFilter(e) {
-    state.selectedCategory = e.target.value;
-    filterAndRenderModels();
-}
-
-// Handle Sort Change
-function handleSortChange(e) {
-    state.sortBy = e.target.value;
-    filterAndRenderModels();
-}
-
-// Update Categories Dropdown
-function updateCategories() {
-    elements.categoryFilter.innerHTML = '<option value="all">All Categories</option>';
-    
-    Array.from(state.categories)
-        .filter(cat => cat !== 'all')
-        .sort()
-        .forEach(category => {
-            const option = document.createElement('option');
-            option.value = category;
-            option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
-            elements.categoryFilter.appendChild(option);
-        });
-    
-    // Set selected category
-    elements.categoryFilter.value = state.selectedCategory;
-}
-
-// Update Model Count
-function updateModelCount() {
-    const count = state.models.length;
-    elements.totalModels.textContent = count;
-    elements.totalModelsCount.textContent = count;
-}
-
-// Update Visible Model Count
-function updateVisibleModelCount() {
-    elements.visibleModels.textContent = state.filteredModels.length;
-}
-
-// Toggle Empty State
-function toggleEmptyState(isEmpty) {
-    if (isEmpty) {
-        elements.emptyState.style.display = 'block';
-        elements.modelsGrid.style.display = 'none';
-    } else {
-        elements.emptyState.style.display = 'none';
-        elements.modelsGrid.style.display = 'grid';
-    }
-}
-
-// Show Loading State
-function showLoadingState(show) {
-    if (show) {
-        elements.loadingState.style.display = 'block';
-        elements.modelsGrid.style.display = 'none';
-        elements.emptyState.style.display = 'none';
-    } else {
-        elements.loadingState.style.display = 'none';
-        elements.modelsGrid.style.display = 'grid';
-    }
-}
-
-// Load Sample Models
-function loadSampleModels() {
-    state.models = CONFIG.DEFAULT_MODELS;
-    state.filteredModels = [...CONFIG.DEFAULT_MODELS];
-    state.categories = new Set(['all', ...CONFIG.DEFAULT_MODELS.map(m => m.category)]);
-    
-    updateModelCount();
-    updateCategories();
-    filterAndRenderModels();
-    
-    showNotification('Loaded sample models', 'info');
-}
-
-// Start Auto Refresh
-function startAutoRefresh() {
-    if (state.autoRefreshInterval) {
-        clearInterval(state.autoRefreshInterval);
-    }
-    
-    state.autoRefreshInterval = setInterval(() => {
-        updateRefreshTimer();
-        loadModels();
-    }, CONFIG.AUTO_REFRESH_INTERVAL);
-    
-    console.log(`✅ Auto-refresh started (${CONFIG.AUTO_REFRESH_INTERVAL / 1000}s interval)`);
-}
-
-// Update Refresh Timer
-function updateRefreshTimer() {
-    const nextRefresh = CONFIG.AUTO_REFRESH_INTERVAL / 1000;
-    elements.refreshTimer.textContent = `${nextRefresh}s`;
-    elements.nextRefresh.textContent = `${nextRefresh}s`;
-}
-
-// Update Last Update Time
-function updateLastUpdateTime() {
-    const now = new Date();
-    state.lastUpdate = now;
-    
-    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const dateString = now.toLocaleDateString();
-    
-    elements.lastUpdateDisplay.textContent = `${dateString} ${timeString}`;
-    elements.lastChecked.textContent = timeString;
-    elements.lastUpdateTime.textContent = timeString;
-    
-    // Update JSON source display
-    const sourceUrl = new URL(CONFIG.MODELS_JSON_URL);
-    elements.jsonSourceDisplay.textContent = sourceUrl.hostname;
-    elements.jsonSource.textContent = sourceUrl.hostname;
-}
-
-// Update Current Time
-function updateCurrentTime() {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    elements.currentTime.textContent = timeString;
-}
-
-// Handle File Select
-function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        handleSelectedFile(file);
-    }
-}
-
-// Handle Drag Over
-function handleDragOver(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    elements.fileUploadArea.style.borderColor = 'var(--primary-color)';
-    elements.fileUploadArea.style.background = 'rgba(102, 126, 234, 0.1)';
-}
-
-// Handle File Drop
-function handleFileDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    elements.fileUploadArea.style.borderColor = '';
-    elements.fileUploadArea.style.background = '';
-    
-    const file = e.dataTransfer.files[0];
-    if (file && file.name.endsWith('.glb')) {
-        handleSelectedFile(file);
-    } else {
-        showNotification('Please select a .glb file', 'error');
-    }
-}
-
-// Handle Selected File
-function handleSelectedFile(file) {
-    // Validate file
-    if (!file.name.endsWith('.glb')) {
-        showNotification('Please select a .glb file', 'error');
-        return;
-    }
-    
-    // Update UI
-    elements.fileName.textContent = file.name;
-    elements.fileSize.textContent = formatFileSize(file.size);
-    elements.fileInfo.style.display = 'flex';
-    
-    // Enable upload button
-    elements.uploadBtn.disabled = false;
-    
-    // Store file
-    state.currentUpload = {
-        file: file,
-        name: elements.modelName.value || file.name.replace('.glb', ''),
-        category: elements.modelCategory.value,
-        description: elements.modelDescription.value || `Uploaded ${file.name}`
-    };
-}
-
-// Format File Size
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Handle Upload
-async function handleUpload() {
-    if (!state.currentUpload) {
-        showNotification('Please select a file first', 'error');
-        return;
-    }
-    
-    const { file, name, category, description } = state.currentUpload;
-    
-    try {
-        // Disable upload button
-        elements.uploadBtn.disabled = true;
-        elements.uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-        
-        // Show progress
-        elements.uploadProgress.style.display = 'block';
-        updateUploadProgress(0, 'Requesting upload URL...');
-        
-        // Step 1: Request presigned URL
-        const uploadData = await requestPresignedUpload(file.name);
-        
-        if (!uploadData.uploadUrl || !uploadData.key) {
-            throw new Error('Invalid response from server');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
         
-        updateUploadProgress(25, 'Uploading file...');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
         
-        // Step 2: Upload file to storage
-        await uploadGLBToStorage(uploadData.uploadUrl, file, (progress) => {
-            const percent = 25 + (progress * 0.75);
-            updateUploadProgress(percent, 'Uploading file...');
-        });
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${model.name.replace(/\s+/g, '_')}.glb`;
+        document.body.appendChild(a);
+        a.click();
         
-        updateUploadProgress(100, 'Finalizing upload...');
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
         
-        // Step 3: Finalize upload
-        await finalizeUpload(uploadData.key, file.name, {
-            name: name,
-            category: category,
-            description: description,
-            thumbnail: getDefaultThumbnail(category)
-        });
-        
-        // Show success
-        showUploadSuccess(name, category, file.name);
-        
-        // Reset form
-        resetUploadForm();
-        
-        // Refresh models after delay
-        setTimeout(() => loadModels(true), 2000);
+        showToast(`${model.name} downloaded successfully!`, 'success');
         
     } catch (error) {
-        console.error('Upload failed:', error);
-        showNotification(`Upload failed: ${error.message}`, 'error');
-        
-        // Reset button
-        elements.uploadBtn.disabled = false;
-        elements.uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload to Backend';
-    } finally {
-        elements.uploadProgress.style.display = 'none';
+        console.error('Download error:', error);
+        showToast(`Failed to download: ${error.message}`, 'error');
     }
 }
 
-// Update Upload Progress
-function updateUploadProgress(percent, text) {
-    elements.progressFill.style.width = `${percent}%`;
-    elements.progressText.textContent = text;
-    elements.progressPercent.textContent = `${Math.round(percent)}%`;
+async function copyModelUrl(model) {
+    try {
+        await navigator.clipboard.writeText(model.glbUrl);
+        showToast('Model URL copied to clipboard!', 'success');
+    } catch (error) {
+        console.error('Copy error:', error);
+        showToast('Failed to copy URL', 'error');
+    }
 }
 
-// Reset Upload Form
-function resetUploadForm() {
-    elements.modelName.value = '';
-    elements.modelCategory.value = 'hindu';
-    elements.modelDescription.value = '';
-    elements.modelFile.value = '';
-    elements.fileInfo.style.display = 'none';
-    elements.uploadBtn.disabled = true;
-    elements.uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload to Backend';
-    elements.uploadProgress.style.display = 'none';
+async function shareModel(model) {
+    try {
+        if (navigator.share) {
+            await navigator.share({
+                title: model.name,
+                text: model.description,
+                url: window.location.href
+            });
+        } else {
+            await navigator.clipboard.writeText(window.location.href);
+            showToast('Link copied to clipboard!', 'success');
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error('Share error:', error);
+            showToast('Failed to share', 'error');
+        }
+    }
+}
+
+// Admin Functions
+function openAdminPanel() {
+    Elements.adminOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAdminPanel() {
+    Elements.adminOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function showAdminDashboard() {
+    Elements.adminLogin.style.display = 'none';
+    Elements.adminDashboard.style.display = 'block';
+    updateAdminModelList();
+}
+
+function hideAdminDashboard() {
+    Elements.adminDashboard.style.display = 'none';
+    Elements.adminLogin.style.display = 'block';
+    Elements.adminPassword.value = '';
+    State.isAdmin = false;
+    saveToLocalStorage();
+}
+
+function updateAdminModelList() {
+    Elements.adminModelsList.innerHTML = '';
     
-    state.currentUpload = null;
+    State.models.forEach(model => {
+        const item = document.createElement('div');
+        item.className = 'admin-model-item';
+        item.innerHTML = `
+            <div class="model-thumb-small">
+                ${model.thumbnailUrl 
+                    ? `<img src="${model.thumbnailUrl}" alt="${model.name}" onerror="this.onerror=null;this.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#667eea,#764ba2);color:white;\\'>🎨</div>'">`
+                    : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#667eea,#764ba2);color:white;">🎨</div>'
+                }
+            </div>
+            <div class="model-info-small">
+                <h6>${model.name}</h6>
+                <span>${model.category} • ${formatDate(model.createdAt)}</span>
+            </div>
+            <div class="model-actions-small">
+                <button class="action-btn-small preview-btn" title="Preview">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn-small delete-btn" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        const previewBtn = item.querySelector('.preview-btn');
+        const deleteBtn = item.querySelector('.delete-btn');
+        
+        previewBtn.onclick = (e) => {
+            e.stopPropagation();
+            closeAdminPanel();
+            openPreview(model);
+        };
+        
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteModelFromGallery(model.id);
+        };
+        
+        Elements.adminModelsList.appendChild(item);
+    });
 }
 
-// Show Upload Success
-function showUploadSuccess(name, category, filename) {
-    elements.uploadedModelName.textContent = name;
-    elements.uploadedCategory.textContent = category;
-    elements.uploadedFileName.textContent = filename;
+async function addModelToGallery(modelData) {
+    try {
+        // Validate required fields
+        if (!modelData.name || !modelData.glbUrl) {
+            throw new Error('Name and GLB URL are required');
+        }
+        
+        const newModel = {
+            id: generateId(),
+            name: modelData.name.trim(),
+            description: modelData.description?.trim() || '',
+            category: modelData.category?.trim() || 'Uncategorized',
+            tags: modelData.tags ? modelData.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+            glbUrl: convertToRawGithubUrl(modelData.glbUrl),
+            thumbnailUrl: convertToRawGithubUrl(modelData.thumbnailUrl),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        // Add to state
+        State.models.unshift(newModel);
+        State.categories.add(newModel.category);
+        
+        // Update UI
+        saveToLocalStorage();
+        updateStats();
+        populateCategories();
+        filterAndSortModels();
+        updateAdminModelList();
+        
+        showToast(`${newModel.name} added to gallery!`, 'success');
+        
+        // Clear form
+        clearAddModelForm();
+        
+        return newModel;
+        
+    } catch (error) {
+        console.error('Add model error:', error);
+        showToast(`Failed to add model: ${error.message}`, 'error');
+        throw error;
+    }
+}
+
+function deleteModelFromGallery(modelId) {
+    if (!confirm('Are you sure you want to delete this model?')) return;
     
-    elements.uploadSuccessModal.style.display = 'flex';
-    setTimeout(() => {
-        elements.uploadSuccessModal.style.opacity = '1';
-    }, 10);
-}
-
-// Close Upload Success Modal
-function closeUploadSuccessModal() {
-    elements.uploadSuccessModal.style.opacity = '0';
-    setTimeout(() => {
-        elements.uploadSuccessModal.style.display = 'none';
-    }, 300);
-}
-
-// Force Refresh Models
-function forceRefreshModels() {
-    closeUploadSuccessModal();
-    loadModels(true);
-}
-
-// Show Notification
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    const index = State.models.findIndex(m => m.id === modelId);
+    if (index === -1) return;
     
-    const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle',
-        info: 'fas fa-info-circle'
-    };
+    const modelName = State.models[index].name;
+    State.models.splice(index, 1);
     
-    notification.innerHTML = `
-        <i class="${icons[type] || icons.info}"></i>
-        <div class="notification-content">
-            <div class="notification-title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
-            <div class="notification-message">${message}</div>
+    // Recalculate categories
+    State.categories.clear();
+    State.models.forEach(m => State.categories.add(m.category));
+    
+    // Update UI
+    saveToLocalStorage();
+    updateStats();
+    populateCategories();
+    filterAndSortModels();
+    updateAdminModelList();
+    
+    showToast(`${modelName} deleted from gallery`, 'info');
+}
+
+// GitHub Sync Functions
+async function pullFromGitHub() {
+    try {
+        Elements.githubStatus.className = 'github-status';
+        Elements.githubStatus.textContent = 'Pulling from GitHub...';
+        Elements.pullJsonBtn.disabled = true;
+        
+        const url = `https://api.github.com/repos/${CONFIG.GITHUB_REPO}/contents/${CONFIG.JSON_PATH}`;
+        const headers = {};
+        
+        if (Elements.githubToken.value) {
+            headers['Authorization'] = `token ${Elements.githubToken.value}`;
+        }
+        
+        const response = await fetch(url, { headers });
+        
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const content = atob(data.content);
+        const models = JSON.parse(content);
+        
+        if (!Array.isArray(models)) {
+            throw new Error('Invalid JSON format');
+        }
+        
+        // Update state
+        State.models = models;
+        State.categories.clear();
+        State.models.forEach(m => State.categories.add(m.category));
+        
+        // Update UI
+        saveToLocalStorage();
+        updateStats();
+        populateCategories();
+        filterAndSortModels();
+        
+        Elements.githubStatus.className = 'github-status success';
+        Elements.githubStatus.textContent = `Successfully pulled ${models.length} models from GitHub`;
+        
+        showToast('Gallery updated from GitHub!', 'success');
+        
+    } catch (error) {
+        console.error('Pull error:', error);
+        Elements.githubStatus.className = 'github-status error';
+        Elements.githubStatus.textContent = `Pull failed: ${error.message}`;
+        showToast(`GitHub pull failed: ${error.message}`, 'error');
+    } finally {
+        Elements.pullJsonBtn.disabled = false;
+    }
+}
+
+async function pushToGitHub() {
+    try {
+        if (!Elements.githubToken.value) {
+            throw new Error('GitHub token is required for push');
+        }
+        
+        Elements.githubStatus.className = 'github-status';
+        Elements.githubStatus.textContent = 'Pushing to GitHub...';
+        Elements.pushJsonBtn.disabled = true;
+        
+        // Get current file SHA
+        const getUrl = `https://api.github.com/repos/${CONFIG.GITHUB_REPO}/contents/${CONFIG.JSON_PATH}`;
+        const getResponse = await fetch(getUrl, {
+            headers: {
+                'Authorization': `token ${Elements.githubToken.value}`
+            }
+        });
+        
+        let sha = '';
+        if (getResponse.ok) {
+            const data = await getResponse.json();
+            sha = data.sha;
+        }
+        
+        // Prepare update
+        const content = JSON.stringify(State.models, null, 2);
+        const encodedContent = btoa(unescape(encodeURIComponent(content)));
+        
+        const updateData = {
+            message: `Update models.json - ${new Date().toISOString()}`,
+            content: encodedContent,
+            sha: sha || undefined
+        };
+        
+        // Push update
+        const pushUrl = `https://api.github.com/repos/${CONFIG.GITHUB_REPO}/contents/${CONFIG.JSON_PATH}`;
+        const pushResponse = await fetch(pushUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${Elements.githubToken.value}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (!pushResponse.ok) {
+            const error = await pushResponse.json();
+            throw new Error(error.message || 'Push failed');
+        }
+        
+        Elements.githubStatus.className = 'github-status success';
+        Elements.githubStatus.textContent = 'Successfully pushed to GitHub!';
+        
+        showToast('Gallery pushed to GitHub!', 'success');
+        
+    } catch (error) {
+        console.error('Push error:', error);
+        Elements.githubStatus.className = 'github-status error';
+        Elements.githubStatus.textContent = `Push failed: ${error.message}`;
+        showToast(`GitHub push failed: ${error.message}`, 'error');
+    } finally {
+        Elements.pushJsonBtn.disabled = false;
+    }
+}
+
+// Utility Functions
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+    
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+            <div class="toast-title">${type.toUpperCase()}</div>
+            <div class="toast-message">${message}</div>
         </div>
-        <button class="notification-close">
+        <button class="toast-close">
             <i class="fas fa-times"></i>
         </button>
     `;
     
-    elements.notifications.appendChild(notification);
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.onclick = () => {
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    };
     
-    // Auto-remove after 5 seconds
+    Elements.toastContainer.appendChild(toast);
+    
+    // Auto remove after 3 seconds
     setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => notification.remove(), 300);
-    }, 5000);
-    
-    // Close button
-    notification.querySelector('.notification-close').addEventListener('click', () => {
-        notification.remove();
-    });
+        if (toast.parentNode) {
+            toast.style.animation = 'fadeOut 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 3000);
 }
 
-// Handle Window Resize
-function handleResize() {
-    // Update grid columns based on screen size
-    const isMobile = window.innerWidth < CONFIG.MOBILE_BREAKPOINT;
-    elements.modelsGrid.style.gridTemplateColumns = isMobile 
-        ? '1fr' 
-        : 'repeat(auto-fill, minmax(300px, 1fr))';
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
-// ========================================
-// BACKEND UPLOAD FUNCTIONS
-// ========================================
+function clearAddModelForm() {
+    Elements.modelName.value = '';
+    Elements.modelDescription.value = '';
+    Elements.modelCategory.value = '';
+    Elements.modelTags.value = '';
+    Elements.thumbnailUrl.value = '';
+    Elements.modelFile.value = '';
+}
 
-// 1) Request presigned URL
-async function requestPresignedUpload(filename) {
-    console.log('📤 Requesting presigned URL for:', filename);
+// Event Listeners Setup
+function setupEventListeners() {
+    // Theme toggle
+    Elements.themeToggle.onclick = () => {
+        document.body.classList.toggle('light-theme');
+        document.body.classList.toggle('dark-theme');
+    };
     
-    const response = await fetch(CONFIG.BACKEND_URL + CONFIG.REQUEST_UPLOAD_ENDPOINT, {
-        method: "POST",
-        headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify({ 
-            filename: filename,
-            timestamp: new Date().toISOString()
-        })
+    // Header scroll effect
+    window.onscroll = () => {
+        if (window.scrollY > 50) {
+            Elements.mainHeader.classList.add('scrolled');
+        } else {
+            Elements.mainHeader.classList.remove('scrolled');
+        }
+    };
+    
+    // Navigation
+    Elements.navToggle.onclick = () => {
+        Elements.navLinks.classList.toggle('active');
+    };
+    
+    // Close nav when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!Elements.navToggle.contains(e.target) && !Elements.navLinks.contains(e.target)) {
+            Elements.navLinks.classList.remove('active');
+        }
     });
     
-    if (!response.ok) {
-        throw new Error(`Failed to request upload URL: ${response.statusText}`);
+    // Search
+    Elements.searchBtn.onclick = () => {
+        searchModels(Elements.searchInput.value);
+    };
+    
+    Elements.searchInput.onkeyup = (e) => {
+        if (e.key === 'Enter') {
+            searchModels(Elements.searchInput.value);
+        }
+    };
+    
+    Elements.gallerySearch.onkeyup = (e) => {
+        searchModels(Elements.gallerySearch.value);
+    };
+    
+    // Filters
+    Elements.categoryFilter.onchange = (e) => {
+        filterByCategory(e.target.value);
+    };
+    
+    Elements.clearFilters.onclick = () => {
+        Elements.gallerySearch.value = '';
+        Elements.categoryFilter.value = 'all';
+        State.searchQuery = '';
+        State.currentCategory = 'all';
+        filterAndSortModels();
+    };
+    
+    Elements.sortSelect.onchange = (e) => {
+        sortModels(e.target.value);
+    };
+    
+    // Refresh
+    Elements.refreshBtn.onclick = async () => {
+        Elements.refreshBtn.classList.add('loading');
+        await loadModels();
+        Elements.refreshBtn.classList.remove('loading');
+        showToast('Models refreshed!', 'success');
+    };
+    
+    // Admin
+    Elements.adminBtn.onclick = openAdminPanel;
+    Elements.closeAdmin.onclick = closeAdminPanel;
+    
+    Elements.loginBtn.onclick = () => {
+        if (Elements.adminPassword.value === CONFIG.ADMIN_PASSWORD) {
+            State.isAdmin = true;
+            saveToLocalStorage();
+            showAdminDashboard();
+            showToast('Admin panel unlocked!', 'success');
+        } else {
+            showToast('Incorrect password', 'error');
+        }
+    };
+    
+    Elements.logoutBtn.onclick = () => {
+        hideAdminDashboard();
+        showToast('Logged out from admin panel', 'info');
+    };
+    
+    // Admin tabs
+    Elements.tabBtns.forEach(btn => {
+        btn.onclick = () => {
+            // Update active tab
+            Elements.tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Show corresponding pane
+            const tabId = btn.dataset.tab;
+            Elements.tabPanes.forEach(pane => {
+                pane.classList.remove('active');
+                if (pane.id === `${tabId}Tab`) {
+                    pane.classList.add('active');
+                }
+            });
+        };
+    });
+    
+    // File upload
+    Elements.uploadArea.onclick = () => Elements.modelFile.click();
+    Elements.uploadArea.ondragover = (e) => {
+        e.preventDefault();
+        Elements.uploadArea.style.borderColor = 'var(--accent-primary)';
+        Elements.uploadArea.style.background = 'rgba(139, 92, 246, 0.1)';
+    };
+    
+    Elements.uploadArea.ondragleave = () => {
+        Elements.uploadArea.style.borderColor = '';
+        Elements.uploadArea.style.background = '';
+    };
+    
+    Elements.uploadArea.ondrop = (e) => {
+        e.preventDefault();
+        Elements.uploadArea.style.borderColor = '';
+        Elements.uploadArea.style.background = '';
+        
+        if (e.dataTransfer.files.length > 0) {
+            handleFileUpload(e.dataTransfer.files[0]);
+        }
+    };
+    
+    Elements.modelFile.onchange = (e) => {
+        if (e.target.files.length > 0) {
+            handleFileUpload(e.target.files[0]);
+        }
+    };
+    
+    // Add model
+    Elements.addModelBtn.onclick = async () => {
+        if (!Elements.modelName.value || !Elements.modelFile.files[0]) {
+            showToast('Please provide name and GLB file', 'error');
+            return;
+        }
+        
+        const modelData = {
+            name: Elements.modelName.value,
+            description: Elements.modelDescription.value,
+            category: Elements.modelCategory.value,
+            tags: Elements.modelTags.value,
+            glbUrl: '', // Will be set from file
+            thumbnailUrl: Elements.thumbnailUrl.value
+        };
+        
+        await addModelToGallery(modelData);
+    };
+    
+    // GitHub sync
+    Elements.pullJsonBtn.onclick = pullFromGitHub;
+    Elements.pushJsonBtn.onclick = pushToGitHub;
+    
+    // Preview modal
+    Elements.closePreview.onclick = closePreview;
+    Elements.previewModal.onclick = (e) => {
+        if (e.target === Elements.previewModal) {
+            closePreview();
+        }
+    };
+    
+    Elements.downloadModel.onclick = () => {
+        if (State.currentPreviewModel) {
+            downloadModel(State.currentPreviewModel);
+        }
+    };
+    
+    Elements.copyUrl.onclick = () => {
+        if (State.currentPreviewModel) {
+            copyModelUrl(State.currentPreviewModel);
+        }
+    };
+    
+    Elements.shareModel.onclick = () => {
+        if (State.currentPreviewModel) {
+            shareModel(State.currentPreviewModel);
+        }
+    };
+    
+    Elements.rotateToggle.onclick = () => {
+        const viewer = Elements.previewViewer;
+        viewer.autoRotate = !viewer.autoRotate;
+        Elements.rotateToggle.classList.toggle('active', viewer.autoRotate);
+    };
+    
+    Elements.fullscreenToggle.onclick = () => {
+        Elements.previewViewer.requestFullscreen();
+    };
+    
+    Elements.arToggle.onclick = () => {
+        Elements.previewViewer.activateAR();
+    };
+    
+    // FAB
+    Elements.fabBtn.onclick = openAdminPanel;
+}
+
+async function handleFileUpload(file) {
+    try {
+        if (!file.name.endsWith('.glb') && !file.name.endsWith('.gltf')) {
+            showToast('Please upload a GLB or GLTF file', 'error');
+            return;
+        }
+        
+        showToast(`Uploading ${file.name}...`, 'info');
+        
+        // Create object URL for preview
+        const objectUrl = URL.createObjectURL(file);
+        
+        // For now, we'll just use the object URL
+        // In a real app, you would upload to a server
+        const modelName = Elements.modelName.value || file.name.replace(/\.[^/.]+$/, "");
+        if (!Elements.modelName.value) {
+            Elements.modelName.value = modelName;
+        }
+        
+        // Update any existing model data
+        // This is where you would handle the actual upload
+        
+        showToast(`${file.name} ready for submission`, 'success');
+        
+    } catch (error) {
+        console.error('File upload error:', error);
+        showToast('File upload failed', 'error');
+    }
+}
+
+// Auto Refresh
+function startAutoRefresh() {
+    if (State.refreshInterval) {
+        clearInterval(State.refreshInterval);
     }
     
-    const data = await response.json();
-    console.log('✅ Presigned URL received:', data);
-    return data;
+    State.refreshInterval = setInterval(async () => {
+        if (!State.isLoading && document.visibilityState === 'visible') {
+            await loadModels();
+            showToast('Gallery auto-updated', 'info');
+        }
+    }, CONFIG.REFRESH_INTERVAL);
 }
 
-// 2) Upload GLB bytes with progress
-async function uploadGLBToStorage(uploadUrl, file, onProgress) {
-    console.log('📤 Uploading file to storage:', file.name);
-    
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-                const percent = (e.loaded / e.total) * 100;
-                if (onProgress) onProgress(percent);
-            }
-        });
-        
-        xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                console.log('✅ File uploaded successfully');
-                resolve();
-            } else {
-                reject(new Error(`Upload failed: ${xhr.statusText}`));
-            }
-        });
-        
-        xhr.addEventListener('error', () => {
-            reject(new Error('Upload failed: Network error'));
-        });
-        
-        xhr.addEventListener('abort', () => {
-            reject(new Error('Upload was cancelled'));
-        });
-        
-        xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-        xhr.send(file);
-    });
-}
-
-// 3) Finalize upload (backend signs GLB + updates models.json)
-async function finalizeUpload(key, filename, meta = {}) {
-    console.log('📝 Finalizing upload:', filename);
-    
-    const response = await fetch(CONFIG.BACKEND_URL + CONFIG.COMPLETE_UPLOAD_ENDPOINT, {
-        method: "POST",
-        headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify({ 
-            key: key,
-            filename: filename,
-            ...meta,
-            timestamp: new Date().toISOString()
-        })
-    });
-    
-    if (!response.ok) {
-        throw new Error(`Failed to finalize upload: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log('✅ Upload finalized:', data);
-    return data;
-}
-
-// Export functions for external use
-window.Divine3DGallery = {
-    config: CONFIG,
-    state: () => ({ ...state }),
-    loadModels: (force) => loadModels(force),
-    requestPresignedUpload,
-    uploadGLBToStorage,
-    finalizeUpload,
-    showNotification,
-    forceRefreshModels,
-    closeUploadSuccessModal
-};
-
-console.log('✨ Divine 3D Models Gallery loaded successfully!');
-
-
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', init);
