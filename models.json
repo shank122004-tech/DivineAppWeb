@@ -24,11 +24,11 @@
   {
     "id": "test_model_3",
     "name": "Shree Ram",
-    "description": "Shree Ram in the forest",
+    "description": "kalash",
     "category": "Spiritual",
     "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/kalash.glb",
-    "thumbnailUrl": "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop",
-    "tags": ["ram", "hindu", "spiritual"],
+    "thumbnailUrl": "",
+    "tags": ["kalash", "hindu", "spiritual"],
     "createdAt": "2024-12-10",
     "updatedAt": "2024-12-10"
   }
