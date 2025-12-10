@@ -34,17 +34,18 @@ const CONFIG = {
     "rating": 4.8,
     "downloadCount": 1250
   },
-        {
-            id: "sample-2",
-            name: "Buddha Meditation",
-            filename: "buddha_meditation.glb",
-            url: "https://github.com/your-username/your-repo/raw/main/models/buddha.glb",
-            thumbnail: "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop",
-            category: "buddha",
-            description: "Peaceful Buddha statue for meditation and mindfulness",
-            source: "github",
-            uploadDate: new Date().toISOString()
-        },
+  {
+    "id": "test_model_1",
+    "name": "Divine Krishna Statue",
+    "description": "Beautiful 3D model of Lord Krishna",
+    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
+    "tags": ["hindu", "krishna", "divine", "statue"],
+    "uploadDate": "2024-01-15",
+    "fileSize": 4500000,
+    "rating": 4.8,
+    "downloadCount": 1250
+  },
         {
             id: "sample-3",
             name: "Sacred Mandala",
@@ -1077,4 +1078,5 @@ window.Divine3DGallery = {
 };
 
 console.log('✨ Divine 3D Models Gallery loaded successfully!');
+
 
