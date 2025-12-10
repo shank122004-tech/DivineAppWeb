@@ -27,7 +27,8 @@ const DIVINE_CONFIG = {
             name: "Sacred Krishna Statue",
             type: "github",
             source: "github",
-            glbUrl: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
+            glbUrl: "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb
+",
             thumbnailUrl: "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
             fileName: "sacred_krishna.glb",
             uploadDate: new Date().toISOString(),
@@ -1774,3 +1775,4 @@ window.DivineCosmos = {
 };
 
 console.log('✨ Divine Cosmos Script Loaded Successfully!');
+
