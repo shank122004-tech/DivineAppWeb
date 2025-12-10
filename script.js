@@ -38,7 +38,7 @@ const CONFIG = {
             description: 'Peaceful Buddha statue in meditation pose',
             category: 'Spiritual',
             tags: ['buddha', 'meditation', 'peace', 'statue'],
-            glbUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
             thumbnailUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
             fileSize: '3.2 MB',
             createdAt: '2024-01-14',
@@ -1425,4 +1425,5 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
+
 
