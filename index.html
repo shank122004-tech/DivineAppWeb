@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Divine Cosmic Universe | Sacred 3D GLB Models Collection</title>
+    <title>Divine Cosmic Universe | Sacred 3D Models Collection</title>
     
     <!-- Meta Tags -->
-    <meta name="description" content="Divine 3D models collection. Sacred GLB models for spiritual and religious visualization hosted on GitHub.">
-    <meta name="keywords" content="divine, cosmic, 3D, GLB, models, sacred, spiritual, hindu, buddha, meditation, shiva, krishna">
+    <meta name="description" content="Divine 3D models collection in Amazon-style product boxes. Sacred GLB models for spiritual and religious visualization hosted on GitHub.">
+    <meta name="keywords" content="divine, cosmic, 3D, GLB, models, sacred, spiritual, hindu, buddha, meditation, shiva, krishna, amazon style">
     <meta name="author" content="Divine Cosmic Universe">
     
     <!-- External Resources -->
@@ -65,7 +65,7 @@
                     </div>
                     <div class="logo-text">
                         <h1 class="divine-title">DivineCosmos</h1>
-                        <h2 class="cosmic-subtitle">3D Universe</h2>
+                        <h2 class="cosmic-subtitle">3D Store</h2>
                         <div class="title-glow"></div>
                     </div>
                 </div>
@@ -74,6 +74,12 @@
                 <div class="refresh-status" id="refreshStatus">
                     <i class="fas fa-sync-alt"></i>
                     <span>Auto-Refresh Active</span>
+                </div>
+
+                <!-- Stats Counter -->
+                <div class="stats-counter">
+                    <i class="fas fa-cube"></i>
+                    <span><span id="liveModelCount">0</span> Models</span>
                 </div>
 
                 <!-- Auto-Refresh Indicator -->
@@ -90,17 +96,16 @@
                 <div class="hero-content">
                     <div class="hero-badge cosmic-badge">
                         <i class="fas fa-star"></i>
-                        <span>AUTO-REFRESH EDITION</span>
+                        <span>AMAZON-STYLE PRODUCTS</span>
                     </div>
                     <h1 class="hero-title divine-glow">
-                        <span class="title-line">Divine Models</span>
-                        <span class="title-line">Auto-Updated</span>
-                        <span class="title-line">From GitHub</span>
+                        <span class="title-line">Divine 3D Models</span>
+                        <span class="title-line">Amazon-Style Display</span>
+                        <span class="title-line">Auto-Updated from GitHub</span>
                     </h1>
                     <p class="hero-subtitle">
-                        Immerse in our celestial collection of sacred 3D models. 
-                        Models are automatically updated from GitHub - no admin needed!
-                        Each GLB is blessed with cosmic energy and divine protection.
+                        Explore our celestial collection of sacred 3D models displayed in beautiful Amazon-style product boxes.
+                        Models update automatically from GitHub - just add GLB images to JSON file!
                     </p>
                     <div class="hero-features">
                         <div class="feature">
@@ -108,8 +113,8 @@
                             <span>Auto-Refresh</span>
                         </div>
                         <div class="feature">
-                            <i class="fas fa-bolt"></i>
-                            <span>Instant Download</span>
+                            <i class="fas fa-box"></i>
+                            <span>Product Boxes</span>
                         </div>
                         <div class="feature">
                             <i class="fab fa-github"></i>
@@ -119,12 +124,16 @@
                             <i class="fas fa-eye"></i>
                             <span>3D Preview</span>
                         </div>
+                        <div class="feature">
+                            <i class="fas fa-download"></i>
+                            <span>Instant Download</span>
+                        </div>
                     </div>
                     <div class="hero-actions">
                         <button class="divine-button cosmic-btn explore-btn">
                             <span class="btn-aura"></span>
                             <i class="fas fa-eye"></i>
-                            Explore Sacred Models
+                            View All Products
                         </button>
                         <div class="refresh-controls">
                             <button class="divine-button outline-btn" id="manualRefreshBtn">
@@ -151,43 +160,45 @@
             </div>
         </section>
 
-        <!-- Divine Models Gallery -->
-        <section class="models-section cosmic-section" id="modelsSection">
+        <!-- Divine Products Gallery -->
+        <section class="products-section cosmic-section" id="productsSection">
             <div class="container">
                 <div class="section-header">
                     <div class="section-ornament">
                         <div class="ornament-line"></div>
                         <div class="ornament-star">
-                            <i class="fas fa-star"></i>
+                            <i class="fas fa-box"></i>
                         </div>
                         <div class="ornament-line"></div>
                     </div>
                     <h2 class="section-title divine-glow">
-                        <span>Auto-Updated</span>
-                        <span class="highlight">Collection</span>
+                        <span>Amazon-Style</span>
+                        <span class="highlight">Product Boxes</span>
                     </h2>
-                    <p class="section-subtitle">Models automatically update from GitHub when models.json changes</p>
+                    <p class="section-subtitle">GLB models automatically appear when added to GitHub JSON file</p>
                     
                     <!-- Search and Filter -->
                     <div class="gallery-controls">
                         <div class="search-box">
-                            <input type="text" id="searchModels" placeholder="Search divine models..." class="divine-input">
+                            <input type="text" id="searchProducts" placeholder="Search divine models..." class="divine-input">
                             <i class="fas fa-search"></i>
                         </div>
                         <div class="filter-tags">
-                            <button class="filter-tag active" data-tag="all">All</button>
+                            <button class="filter-tag active" data-tag="all">All Models</button>
                             <button class="filter-tag" data-tag="hindu">Hindu</button>
                             <button class="filter-tag" data-tag="buddha">Buddha</button>
                             <button class="filter-tag" data-tag="mandala">Mandala</button>
                             <button class="filter-tag" data-tag="sacred">Sacred</button>
-                            <button class="filter-tag" data-tag="github">GitHub</button>
+                            <button class="filter-tag" data-tag="statue">Statue</button>
+                            <button class="filter-tag" data-tag="symbol">Symbol</button>
+                            <button class="filter-tag" data-tag="meditation">Meditation</button>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Models Grid -->
-                <div id="modelsGrid" class="cosmic-grid premium-grid">
-                    <!-- Models will be loaded here -->
+                <!-- Products Grid -->
+                <div id="productsGrid" class="amazon-grid">
+                    <!-- Product boxes will be loaded here -->
                 </div>
                 
                 <!-- Empty State -->
@@ -195,7 +206,7 @@
                     <div class="empty-orb">
                         <i class="fas fa-cloud"></i>
                     </div>
-                    <h3>Loading Divine Models</h3>
+                    <h3>Loading Divine Products</h3>
                     <p>Fetching models from GitHub...</p>
                     <button class="divine-button outline-btn" id="retryLoadBtn">
                         <i class="fas fa-redo"></i>
@@ -208,7 +219,7 @@
                     <div class="spinner-orb">
                         <i class="fas fa-infinity fa-spin"></i>
                     </div>
-                    <p>Loading divine models from GitHub...</p>
+                    <p>Loading divine products from GitHub...</p>
                 </div>
 
                 <!-- Load Info -->
@@ -217,10 +228,11 @@
                         <i class="fab fa-github"></i>
                         <div class="info-content">
                             <h4>Auto-Refresh Active</h4>
-                            <p>This gallery automatically updates when new models are added to GitHub.</p>
+                            <p>Add GLB models to GitHub repository and they'll automatically appear here in Amazon-style boxes.</p>
                             <div class="info-meta">
                                 <span><i class="fas fa-clock"></i> Last checked: <span id="lastChecked">Just now</span></span>
                                 <span><i class="fas fa-sync"></i> Next check in: <span id="nextCheck">60s</span></span>
+                                <span><i class="fas fa-box"></i> Products loaded: <span id="productsCount">0</span></span>
                             </div>
                         </div>
                     </div>
@@ -234,11 +246,11 @@
                 <div class="stats-grid">
                     <div class="stat-card divine-card">
                         <div class="stat-icon">
-                            <i class="fas fa-cube"></i>
+                            <i class="fas fa-box"></i>
                             <div class="icon-glow"></div>
                         </div>
-                        <div class="stat-value cosmic-count" data-count="0">0</div>
-                        <div class="stat-label">Sacred Models</div>
+                        <div class="stat-value cosmic-count" id="totalProducts" data-count="0">0</div>
+                        <div class="stat-label">Product Boxes</div>
                     </div>
                     <div class="stat-card divine-card">
                         <div class="stat-icon">
@@ -246,7 +258,7 @@
                             <div class="icon-glow"></div>
                         </div>
                         <div class="stat-value cosmic-count" data-count="0">0</div>
-                        <div class="stat-label">Cosmic Downloads</div>
+                        <div class="stat-label">Total Downloads</div>
                     </div>
                     <div class="stat-card divine-card">
                         <div class="stat-icon">
@@ -273,10 +285,10 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title divine-glow">
-                        <span>Auto-Refresh</span>
-                        <span class="highlight">System</span>
+                        <span>How to Add</span>
+                        <span class="highlight">New Products</span>
                     </h2>
-                    <p class="section-subtitle">No admin needed - models update automatically from GitHub</p>
+                    <p class="section-subtitle">Add GLB models to GitHub and they'll automatically appear here</p>
                 </div>
                 <div class="steps-grid">
                     <div class="step-card divine-card">
@@ -284,16 +296,16 @@
                         <div class="step-icon">
                             <i class="fab fa-github"></i>
                         </div>
-                        <h3>GitHub Hosted</h3>
-                        <p>Models are stored in GitHub repository and served via GitHub Pages</p>
+                        <h3>Upload to GitHub</h3>
+                        <p>Upload your GLB file to GitHub repository in "models" folder</p>
                     </div>
                     <div class="step-card divine-card">
                         <div class="step-number">2</div>
                         <div class="step-icon">
                             <i class="fas fa-code"></i>
                         </div>
-                        <h3>JSON Configuration</h3>
-                        <p>models.json file defines all models with metadata and GLB URLs</p>
+                        <h3>Update JSON File</h3>
+                        <p>Add model details to models.json with name, description, tags, and GLB URL</p>
                     </div>
                     <div class="step-card divine-card">
                         <div class="step-number">3</div>
@@ -306,10 +318,10 @@
                     <div class="step-card divine-card">
                         <div class="step-number">4</div>
                         <div class="step-icon">
-                            <i class="fas fa-eye"></i>
+                            <i class="fas fa-box"></i>
                         </div>
-                        <h3>Instant Update</h3>
-                        <p>New models appear automatically without any user action</p>
+                        <h3>Instant Display</h3>
+                        <p>Model appears in Amazon-style product box automatically</p>
                     </div>
                 </div>
             </div>
@@ -325,7 +337,7 @@
                         </div>
                         <div class="footer-text">
                             <h3>Divine Cosmic Universe</h3>
-                            <p>Auto-updating sacred 3D models collection</p>
+                            <p>Amazon-style 3D models collection</p>
                         </div>
                     </div>
                     
@@ -344,14 +356,14 @@
                         </div>
                         <div class="link-group">
                             <h4>How to Add Models</h4>
-                            <a href="#">
-                                <i class="fas fa-plus-circle"></i> Upload GLB to GitHub
+                            <a href="https://github.com/shank122004-tech/DivineAppWeb/upload/main/models" target="_blank">
+                                <i class="fas fa-upload"></i> Upload GLB Files
                             </a>
-                            <a href="#">
-                                <i class="fas fa-edit"></i> Update models.json
+                            <a href="https://github.com/shank122004-tech/DivineAppWeb/edit/main/models.json" target="_blank">
+                                <i class="fas fa-edit"></i> Update JSON File
                             </a>
-                            <a href="#">
-                                <i class="fas fa-sync"></i> Auto-Refresh Guide
+                            <a href="#howItWorks">
+                                <i class="fas fa-question-circle"></i> View Guide
                             </a>
                         </div>
                     </div>
@@ -377,7 +389,7 @@
                         <i class="fas fa-copyright"></i> 2024 Divine Cosmic Universe. Models auto-update from GitHub.
                     </div>
                     <div class="footer-mantra">
-                        <span class="mantra-text">Auto-Refresh Active</span>
+                        <span class="mantra-text">Amazon-Style Product Boxes</span>
                         <div class="mantra-glow"></div>
                     </div>
                     <div class="footer-note">
@@ -412,8 +424,8 @@
                 </div>
                 <div class="model-info-preview">
                     <div class="info-row">
-                        <span class="info-label"><i class="fas fa-link"></i> Source:</span>
-                        <span id="previewModelSource" class="info-value"></span>
+                        <span class="info-label"><i class="fab fa-github"></i> Source:</span>
+                        <span id="previewModelSource" class="info-value">GitHub Repository</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label"><i class="fas fa-link"></i> GLB URL:</span>
@@ -433,13 +445,13 @@
                     </div>
                 </div>
                 <div class="preview-actions">
-                    <button id="downloadPreviewBtn" class="divine-button cosmic-btn">
+                    <a href="#" id="directDownloadLink" class="divine-button cosmic-btn" download>
                         <i class="fas fa-download"></i>
-                        Download GLB
-                    </button>
+                        Download GLB File
+                    </a>
                     <button class="divine-button outline-btn close-preview-btn">
                         <i class="fas fa-times"></i>
-                        Close
+                        Close Preview
                     </button>
                 </div>
             </div>
