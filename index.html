@@ -70,57 +70,19 @@
                     </div>
                 </div>
                 
-                <!-- APK Download -->
-                <a href="https://www.mediafire.com/file/fdfnc5kg8wwq52d/app-debug.apk/file" target="_blank" class="cosmic-apk mobile-hidden">
-                    <span class="apk-icon">
-                        <i class="fas fa-rocket"></i>
-                    </span>
-                    <span class="apk-text">
-                        <span class="apk-title">Cosmic App</span>
-                        <span class="ap-sub">Download APK</span>
-                    </span>
-                    <span class="apk-glow"></span>
-                </a>
+                <!-- Auto-Refresh Status -->
+                <div class="refresh-status" id="refreshStatus">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Auto-Refresh Active</span>
+                </div>
 
-                <nav class="nav">
-                    <button id="adminAccessBtn" class="divine-button cosmic-btn nav-btn">
-                        <span class="btn-aura"></span>
-                        <i class="fas fa-crown"></i>
-                        Divine Access
-                    </button>
-                </nav>
+                <!-- Auto-Refresh Indicator -->
+                <div class="refresh-indicator" id="refreshIndicator">
+                    <div class="refresh-pulse"></div>
+                    <span>Checking for updates...</span>
+                </div>
             </div>
         </header>
-
-        <!-- Admin Login Modal -->
-        <div id="adminLoginModal" class="modal cosmic-modal" style="display: none;">
-            <div class="modal-content divine-card">
-                <div class="modal-header">
-                    <div class="modal-glow"></div>
-                    <h2><i class="fas fa-crown"></i> Divine Access Portal</h2>
-                    <span class="close-modal divine-close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="divine-input-group">
-                        <div class="input-icon">
-                            <i class="fas fa-key"></i>
-                        </div>
-                        <input type="password" id="adminPassword" placeholder="Enter Cosmic Passcode" class="divine-input">
-                        <div class="input-glow"></div>
-                    </div>
-                    <button id="loginBtn" class="divine-button cosmic-btn">
-                        <span class="btn-aura"></span>
-                        <span class="btn-sparkles">
-                            <i class="fas fa-sparkles"></i>
-                            <i class="fas fa-sparkles"></i>
-                            <i class="fas fa-sparkles"></i>
-                        </span>
-                        Access Divine Portal
-                    </button>
-                    <p id="loginError" class="error-message"></p>
-                </div>
-            </div>
-        </div>
 
         <!-- Cosmic Hero Section -->
         <section class="hero cosmic-hero">
@@ -128,29 +90,29 @@
                 <div class="hero-content">
                     <div class="hero-badge cosmic-badge">
                         <i class="fas fa-star"></i>
-                        <span>SACRED EDITION</span>
+                        <span>AUTO-REFRESH EDITION</span>
                     </div>
                     <h1 class="hero-title divine-glow">
-                        <span class="title-line">Where Divinity</span>
-                        <span class="title-line">Meets Digital</span>
-                        <span class="title-line">Cosmos</span>
+                        <span class="title-line">Divine Models</span>
+                        <span class="title-line">Auto-Updated</span>
+                        <span class="title-line">From GitHub</span>
                     </h1>
                     <p class="hero-subtitle">
                         Immerse in our celestial collection of sacred 3D models. 
+                        Models are automatically updated from GitHub - no admin needed!
                         Each GLB is blessed with cosmic energy and divine protection.
-                        Accessible to all, hosted eternally on GitHub.
                     </p>
                     <div class="hero-features">
                         <div class="feature">
-                            <i class="fas fa-shield-alt"></i>
-                            <span>Divine Protection</span>
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Auto-Refresh</span>
                         </div>
                         <div class="feature">
                             <i class="fas fa-bolt"></i>
                             <span>Instant Download</span>
                         </div>
                         <div class="feature">
-                            <i class="fas fa-cloud"></i>
+                            <i class="fab fa-github"></i>
                             <span>GitHub Hosted</span>
                         </div>
                         <div class="feature">
@@ -164,10 +126,16 @@
                             <i class="fas fa-eye"></i>
                             Explore Sacred Models
                         </button>
-                        <a href="https://www.mediafire.com/file/fdfnc5kg8wwq52d/app-debug.apk/file" target="_blank" class="divine-button outline-btn mobile-only-btn">
-                            <i class="fas fa-download"></i>
-                            Download Mobile App
-                        </a>
+                        <div class="refresh-controls">
+                            <button class="divine-button outline-btn" id="manualRefreshBtn">
+                                <i class="fas fa-redo"></i>
+                                Check for Updates
+                            </button>
+                            <div class="refresh-info">
+                                <i class="fas fa-info-circle"></i>
+                                Auto-checks every 60 seconds
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="hero-visual mobile-hidden">
@@ -195,10 +163,10 @@
                         <div class="ornament-line"></div>
                     </div>
                     <h2 class="section-title divine-glow">
-                        <span>Sacred</span>
+                        <span>Auto-Updated</span>
                         <span class="highlight">Collection</span>
                     </h2>
-                    <p class="section-subtitle">Browse our eternal library of divine 3D models hosted on GitHub</p>
+                    <p class="section-subtitle">Models automatically update from GitHub when models.json changes</p>
                     
                     <!-- Search and Filter -->
                     <div class="gallery-controls">
@@ -212,6 +180,7 @@
                             <button class="filter-tag" data-tag="buddha">Buddha</button>
                             <button class="filter-tag" data-tag="mandala">Mandala</button>
                             <button class="filter-tag" data-tag="sacred">Sacred</button>
+                            <button class="filter-tag" data-tag="github">GitHub</button>
                         </div>
                     </div>
                 </div>
@@ -224,13 +193,13 @@
                 <!-- Empty State -->
                 <div id="emptyState" class="cosmic-empty" style="display: none;">
                     <div class="empty-orb">
-                        <i class="fas fa-universal-access"></i>
+                        <i class="fas fa-cloud"></i>
                     </div>
-                    <h3>The Cosmos Awaits</h3>
-                    <p>No divine models have been manifested yet</p>
-                    <button class="divine-button outline-btn" id="requestManifestationBtn">
-                        <i class="fas fa-plus"></i>
-                        Request Manifestation
+                    <h3>Loading Divine Models</h3>
+                    <p>Fetching models from GitHub...</p>
+                    <button class="divine-button outline-btn" id="retryLoadBtn">
+                        <i class="fas fa-redo"></i>
+                        Retry Loading
                     </button>
                 </div>
                 
@@ -239,7 +208,22 @@
                     <div class="spinner-orb">
                         <i class="fas fa-infinity fa-spin"></i>
                     </div>
-                    <p>Loading divine models...</p>
+                    <p>Loading divine models from GitHub...</p>
+                </div>
+
+                <!-- Load Info -->
+                <div class="load-info" id="loadInfo">
+                    <div class="info-card">
+                        <i class="fab fa-github"></i>
+                        <div class="info-content">
+                            <h4>Auto-Refresh Active</h4>
+                            <p>This gallery automatically updates when new models are added to GitHub.</p>
+                            <div class="info-meta">
+                                <span><i class="fas fa-clock"></i> Last checked: <span id="lastChecked">Just now</span></span>
+                                <span><i class="fas fa-sync"></i> Next check in: <span id="nextCheck">60s</span></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -274,11 +258,11 @@
                     </div>
                     <div class="stat-card divine-card">
                         <div class="stat-icon">
-                            <i class="fas fa-globe"></i>
+                            <i class="fas fa-sync-alt"></i>
                             <div class="icon-glow"></div>
                         </div>
-                        <div class="stat-value cosmic-count" data-count="1">0</div>
-                        <div class="stat-label">Eternal Hosting</div>
+                        <div class="stat-value cosmic-count" data-count="60">60</div>
+                        <div class="stat-label">Auto-Refresh (sec)</div>
                     </div>
                 </div>
             </div>
@@ -289,10 +273,10 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title divine-glow">
-                        <span>How It</span>
-                        <span class="highlight">Works</span>
+                        <span>Auto-Refresh</span>
+                        <span class="highlight">System</span>
                     </h2>
-                    <p class="section-subtitle">Eternal access to divine models through GitHub</p>
+                    <p class="section-subtitle">No admin needed - models update automatically from GitHub</p>
                 </div>
                 <div class="steps-grid">
                     <div class="step-card divine-card">
@@ -301,31 +285,31 @@
                             <i class="fab fa-github"></i>
                         </div>
                         <h3>GitHub Hosted</h3>
-                        <p>All models are hosted publicly on GitHub repositories for eternal access</p>
+                        <p>Models are stored in GitHub repository and served via GitHub Pages</p>
                     </div>
                     <div class="step-card divine-card">
                         <div class="step-number">2</div>
                         <div class="step-icon">
-                            <i class="fas fa-link"></i>
+                            <i class="fas fa-code"></i>
                         </div>
-                        <h3>Public URLs</h3>
-                        <p>Models use GitHub Pages URLs accessible to everyone without authentication</p>
+                        <h3>JSON Configuration</h3>
+                        <p>models.json file defines all models with metadata and GLB URLs</p>
                     </div>
                     <div class="step-card divine-card">
                         <div class="step-number">3</div>
                         <div class="step-icon">
-                            <i class="fas fa-download"></i>
+                            <i class="fas fa-sync-alt"></i>
                         </div>
-                        <h3>Instant Download</h3>
-                        <p>Download GLB files directly or view in 3D with model-viewer</p>
+                        <h3>Auto-Detection</h3>
+                        <p>Website automatically checks for updates every 60 seconds</p>
                     </div>
                     <div class="step-card divine-card">
                         <div class="step-number">4</div>
                         <div class="step-icon">
-                            <i class="fas fa-mobile-alt"></i>
+                            <i class="fas fa-eye"></i>
                         </div>
-                        <h3>Mobile Ready</h3>
-                        <p>Access divine models on any device with responsive 3D viewer</p>
+                        <h3>Instant Update</h3>
+                        <p>New models appear automatically without any user action</p>
                     </div>
                 </div>
             </div>
@@ -341,44 +325,48 @@
                         </div>
                         <div class="footer-text">
                             <h3>Divine Cosmic Universe</h3>
-                            <p>Where spirituality meets eternal digital divinity</p>
+                            <p>Auto-updating sacred 3D models collection</p>
                         </div>
                     </div>
                     
                     <div class="footer-links">
                         <div class="link-group">
-                            <h4>Sacred Realms</h4>
-                            <a href="#modelsSection"><i class="fas fa-chevron-right"></i> Divine Models</a>
-                            <a href="#"><i class="fas fa-chevron-right"></i> Sacred Collection</a>
-                            <a href="#"><i class="fas fa-chevron-right"></i> Eternal Library</a>
-                            <a href="#"><i class="fas fa-chevron-right"></i> Cosmic Archive</a>
+                            <h4>GitHub Repository</h4>
+                            <a href="https://github.com/shank122004-tech/DivineAppWeb" target="_blank">
+                                <i class="fab fa-github"></i> View Source Code
+                            </a>
+                            <a href="https://github.com/shank122004-tech/DivineAppWeb/issues" target="_blank">
+                                <i class="fas fa-bug"></i> Report Issues
+                            </a>
+                            <a href="https://github.com/shank122004-tech/DivineAppWeb/blob/main/models.json" target="_blank">
+                                <i class="fas fa-code"></i> Edit models.json
+                            </a>
                         </div>
                         <div class="link-group">
-                            <h4>Divine Support</h4>
-                            <a href="#"><i class="fas fa-chevron-right"></i> Celestial Help</a>
-                            <a href="#"><i class="fas fa-chevron-right"></i> Contact Oracles</a>
-                            <a href="#"><i class="fas fa-chevron-right"></i> Cosmic FAQ</a>
-                            <a href="#"><i class="fas fa-chevron-right"></i> Tutorials</a>
+                            <h4>How to Add Models</h4>
+                            <a href="#">
+                                <i class="fas fa-plus-circle"></i> Upload GLB to GitHub
+                            </a>
+                            <a href="#">
+                                <i class="fas fa-edit"></i> Update models.json
+                            </a>
+                            <a href="#">
+                                <i class="fas fa-sync"></i> Auto-Refresh Guide
+                            </a>
                         </div>
                     </div>
                     
                     <div class="footer-social">
-                        <div class="social-title">Join the Cosmos</div>
+                        <div class="social-title">Repository Links</div>
                         <div class="social-links">
-                            <a href="#" class="social-icon">
-                                <i class="fab fa-discord"></i>
-                            </a>
-                            <a href="#" class="social-icon">
-                                <i class="fab fa-telegram"></i>
-                            </a>
-                            <a href="https://github.com" target="_blank" class="social-icon">
+                            <a href="https://github.com/shank122004-tech/DivineAppWeb" target="_blank" class="social-icon">
                                 <i class="fab fa-github"></i>
                             </a>
-                            <a href="#" class="social-icon">
-                                <i class="fab fa-youtube"></i>
+                            <a href="https://shank122004-tech.github.io/DivineAppWeb/" target="_blank" class="social-icon">
+                                <i class="fas fa-globe"></i>
                             </a>
-                            <a href="#" class="social-icon">
-                                <i class="fab fa-twitter"></i>
+                            <a href="https://raw.githubusercontent.com/shank122004-tech/DivineAppWeb/main/models.json" target="_blank" class="social-icon">
+                                <i class="fas fa-code"></i>
                             </a>
                         </div>
                     </div>
@@ -386,322 +374,18 @@
                 
                 <div class="footer-bottom">
                     <div class="copyright">
-                        <i class="fas fa-copyright"></i> 2024 Divine Cosmic Universe. All cosmic rights reserved.
+                        <i class="fas fa-copyright"></i> 2024 Divine Cosmic Universe. Models auto-update from GitHub.
                     </div>
                     <div class="footer-mantra">
-                        <span class="mantra-text">ॐ नमः शिवाय</span>
+                        <span class="mantra-text">Auto-Refresh Active</span>
                         <div class="mantra-glow"></div>
                     </div>
                     <div class="footer-note">
-                        <i class="fab fa-github"></i> Powered by GitHub Pages & Divine Energy
+                        <i class="fab fa-github"></i> Powered by GitHub Pages & Auto-Refresh System
                     </div>
                 </div>
             </div>
         </footer>
-    </div>
-
-    <!-- Admin Panel -->
-    <div id="adminPanel" class="admin-panel cosmic-admin" style="display: none;">
-        <div class="admin-header divine-header">
-            <div class="admin-logo">
-                <div class="logo-orb">
-                    <i class="fas fa-crown"></i>
-                </div>
-                <h2>Cosmic Administration Portal</h2>
-                <div class="admin-aura"></div>
-            </div>
-            <button id="logoutBtn" class="divine-button cosmic-btn">
-                <span class="btn-aura"></span>
-                <i class="fas fa-sign-out-alt"></i>
-                Return to Website
-            </button>
-        </div>
-        <div class="admin-content">
-            <div class="admin-portals">
-                <div class="portal-card active" data-portal="upload">
-                    <div class="portal-icon">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                    </div>
-                    <h3>Upload Portal</h3>
-                    <div class="portal-glow"></div>
-                </div>
-                <div class="portal-card" data-portal="github">
-                    <div class="portal-icon">
-                        <i class="fab fa-github"></i>
-                    </div>
-                    <h3>GitHub URL</h3>
-                    <div class="portal-glow"></div>
-                </div>
-                <div class="portal-card" data-portal="manage">
-                    <div class="portal-icon">
-                        <i class="fas fa-universe"></i>
-                    </div>
-                    <h3>Model Management</h3>
-                    <div class="portal-glow"></div>
-                </div>
-                <div class="portal-card" data-portal="stats">
-                    <div class="portal-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3>Statistics</h3>
-                    <div class="portal-glow"></div>
-                </div>
-            </div>
-
-            <!-- Upload Status -->
-            <div class="upload-status divine-card" style="display: none;">
-                <div class="status-header">
-                    <h3><i class="fas fa-sync-alt fa-spin"></i> Divine Upload</h3>
-                </div>
-                <div class="status-body">
-                    <div class="cosmic-progress">
-                        <div class="progress-track">
-                            <div class="progress-fill"></div>
-                            <div class="progress-stars"></div>
-                        </div>
-                        <div class="progress-text">
-                            <span class="status-text">Initializing cosmic transfer...</span>
-                            <span class="status-percent">0%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- File Upload Portal -->
-            <div id="uploadPortal" class="portal-content active">
-                <div class="divine-card upload-portal">
-                    <div class="portal-header">
-                        <h3><i class="fas fa-cloud-upload-alt"></i> Upload Divine Model</h3>
-                        <div class="header-glow"></div>
-                        <div class="portal-subtitle">
-                            <i class="fas fa-info-circle"></i> Upload GLB files directly to the cosmos
-                        </div>
-                    </div>
-                    <div class="portal-body">
-                        <div class="cosmic-form">
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-cube"></i> Model Name
-                                </label>
-                                <input type="text" id="modelName" placeholder="Enter divine model name" class="divine-input">
-                                <div class="input-glow"></div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-image"></i> Thumbnail Image
-                                </label>
-                                <div class="file-upload cosmic-upload">
-                                    <input type="file" id="modelThumbnail" accept="image/*">
-                                    <div class="upload-area">
-                                        <i class="fas fa-cloud-upload"></i>
-                                        <span>Drop or select thumbnail</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-file-code"></i> GLB Model File
-                                </label>
-                                <div class="file-upload cosmic-upload">
-                                    <input type="file" id="modelFile" accept=".glb">
-                                    <div class="upload-area">
-                                        <i class="fas fa-file-archive"></i>
-                                        <span>Drop or select GLB file</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-tags"></i> Divine Tags
-                                </label>
-                                <input type="text" id="modelTags" placeholder="hindu, sacred, krishna, buddha (comma separated)" class="divine-input">
-                                <div class="input-glow"></div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-align-left"></i> Description
-                                </label>
-                                <textarea id="modelDescription" placeholder="Describe this divine model..." class="divine-input" rows="3"></textarea>
-                                <div class="input-glow"></div>
-                            </div>
-                            <button id="uploadBtn" class="divine-button cosmic-btn">
-                                <span class="btn-aura"></span>
-                                <i class="fas fa-upload"></i>
-                                Upload to Cosmos
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- GitHub URL Portal -->
-            <div id="githubPortal" class="portal-content">
-                <div class="divine-card github-portal">
-                    <div class="portal-header">
-                        <h3><i class="fab fa-github"></i> Add GitHub GLB URL</h3>
-                        <div class="header-glow"></div>
-                        <div class="portal-subtitle">
-                            <i class="fas fa-info-circle"></i> Paste GitHub URL to add model for all users
-                        </div>
-                    </div>
-                    <div class="portal-body">
-                        <div class="cosmic-form">
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-cube"></i> Divine Model Name
-                                </label>
-                                <input type="text" id="githubModelName" placeholder="Enter cosmic model name" class="divine-input">
-                                <div class="input-glow"></div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-link"></i> GitHub GLB URL
-                                </label>
-                                <input type="url" id="githubGlbUrl" placeholder="https://github.com/user/repo/blob/main/models/file.glb" class="divine-input">
-                                <div class="input-glow"></div>
-                                <div class="input-hint">
-                                    <i class="fas fa-info-circle"></i> Accepts: GitHub blob, raw, or GitHub Pages URLs
-                                </div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-image"></i> Thumbnail URL (Optional)
-                                </label>
-                                <input type="url" id="githubThumbnailUrl" placeholder="https://github.com/user/repo/blob/main/thumbnails/image.jpg" class="divine-input">
-                                <div class="input-glow"></div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-tags"></i> Divine Tags
-                                </label>
-                                <input type="text" id="githubModelTags" placeholder="krishna, buddha, sacred, divine (comma separated)" class="divine-input">
-                                <div class="input-glow"></div>
-                            </div>
-                            <div class="form-group divine-input-group">
-                                <label class="form-label">
-                                    <i class="fas fa-code-branch"></i> Convert to GitHub Pages
-                                </label>
-                                <div class="checkbox-group">
-                                    <input type="checkbox" id="convertToGhPages" checked>
-                                    <label for="convertToGhPages">Auto-convert to GitHub Pages URL</label>
-                                </div>
-                            </div>
-                            <div class="form-actions">
-                                <button id="validateGithubUrlBtn" class="divine-button outline-btn">
-                                    <i class="fas fa-check-circle"></i>
-                                    Validate URL
-                                </button>
-                                <button id="addGithubUrlBtn" class="divine-button cosmic-btn">
-                                    <span class="btn-aura"></span>
-                                    <i class="fab fa-github"></i>
-                                    Add to Divine Library
-                                </button>
-                            </div>
-                            <div id="githubValidationResult" class="validation-result"></div>
-                            <div class="github-examples">
-                                <h4><i class="fas fa-lightbulb"></i> Supported URL Formats:</h4>
-                                <ul>
-                                    <li>GitHub Blob: <code>https://github.com/user/repo/blob/main/models/file.glb</code></li>
-                                    <li>Raw GitHub: <code>https://raw.githubusercontent.com/user/repo/main/models/file.glb</code></li>
-                                    <li>GitHub Pages: <code>https://username.github.io/repo/models/file.glb</code></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Models Management Portal -->
-            <div id="managePortal" class="portal-content">
-                <div class="divine-card">
-                    <div class="portal-header">
-                        <h3><i class="fas fa-universe"></i> Divine Models Library</h3>
-                        <div class="header-glow"></div>
-                        <div class="portal-subtitle">
-                            <i class="fas fa-database"></i> Total Models: <span id="totalModelsCount">0</span>
-                        </div>
-                    </div>
-                    <div class="portal-body">
-                        <div class="management-tools">
-                            <div class="search-box divine-input-group">
-                                <input type="text" id="modelSearch" placeholder="Search divine models..." class="divine-input">
-                                <i class="fas fa-search"></i>
-                            </div>
-                            <div class="filter-options">
-                                <button class="filter-btn active" data-filter="all">All</button>
-                                <button class="filter-btn" data-filter="github">GitHub</button>
-                                <button class="filter-btn" data-filter="upload">Uploaded</button>
-                                <button class="filter-btn" data-filter="url">External URL</button>
-                            </div>
-                        </div>
-                        <div id="adminModelsGrid" class="cosmic-grid admin-grid"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistics Portal -->
-            <div id="statsPortal" class="portal-content">
-                <div class="divine-card">
-                    <div class="portal-header">
-                        <h3><i class="fas fa-chart-line"></i> Divine Statistics</h3>
-                        <div class="header-glow"></div>
-                        <div class="portal-subtitle">
-                            <i class="fas fa-chart-bar"></i> Analytics for cosmic models
-                        </div>
-                    </div>
-                    <div class="portal-body">
-                        <div class="stats-charts">
-                            <div class="stat-chart-card">
-                                <h4><i class="fas fa-chart-pie"></i> Model Distribution</h4>
-                                <div class="chart-placeholder">
-                                    <div class="chart-visual">
-                                        <div class="chart-slice" style="--color: var(--cosmic-primary); --percentage: 40;"></div>
-                                        <div class="chart-slice" style="--color: var(--cosmic-secondary); --percentage: 30;"></div>
-                                        <div class="chart-slice" style="--color: var(--divine-gold); --percentage: 20;"></div>
-                                        <div class="chart-slice" style="--color: var(--sacred-purple); --percentage: 10;"></div>
-                                    </div>
-                                    <div class="chart-legend">
-                                        <div class="legend-item">
-                                            <span class="legend-color" style="background: var(--cosmic-primary);"></span>
-                                            <span>GitHub Models</span>
-                                        </div>
-                                        <div class="legend-item">
-                                            <span class="legend-color" style="background: var(--cosmic-secondary);"></span>
-                                            <span>Uploaded Models</span>
-                                        </div>
-                                        <div class="legend-item">
-                                            <span class="legend-color" style="background: var(--divine-gold);"></span>
-                                            <span>External URLs</span>
-                                        </div>
-                                        <div class="legend-item">
-                                            <span class="legend-color" style="background: var(--sacred-purple);"></span>
-                                            <span>Sample Models</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="stat-chart-card">
-                                <h4><i class="fas fa-download"></i> Download Activity</h4>
-                                <div class="download-stats">
-                                    <div class="stat-row">
-                                        <span>Total Downloads</span>
-                                        <span class="stat-value" id="totalDownloads">0</span>
-                                    </div>
-                                    <div class="stat-row">
-                                        <span>Today's Downloads</span>
-                                        <span class="stat-value" id="todayDownloads">0</span>
-                                    </div>
-                                    <div class="stat-row">
-                                        <span>Most Popular</span>
-                                        <span class="stat-value" id="popularModel">None</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Model Preview Modal -->
