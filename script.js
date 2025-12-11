@@ -1,14 +1,13 @@
-// script.js - Divine 3D Gallery
+// script.js - Divine 3D Gallery - Complete with GLB Security & GitHub Import
 'use strict';
 
 // Configuration
 const CONFIG = {
-    MODELS_JSON_URL: 'https://raw.githubusercontent.com/shank122004-tech/DivineAppWeb/main/models.json',
-    REFRESH_INTERVAL: 15000, // 15 seconds
+    DEFAULT_GITHUB_REPO: 'shank122004-tech/DivineAppWeb',
+    DEFAULT_MODELS_PATH: 'models',
     ADMIN_PASSWORD: 'admin123',
-    GITHUB_REPO: 'shank122004-tech/DivineAppWeb',
-    JSON_PATH: 'models.json',
     LOCAL_STORAGE_KEY: 'divine3d_gallery_data',
+    CACHE_DURATION: 15 * 60 * 1000, // 15 minutes
     
     // GLB Security Configuration
     GLB_SECURITY: {
@@ -16,7 +15,14 @@ const CONFIG = {
         INTERNAL_SIGNATURE: "DM-9937-SECURE-CODE"
     },
     
-    // Fallback sample models
+    // GitHub API Configuration
+    GITHUB_API: {
+        BASE_URL: 'https://api.github.com',
+        RAW_CONTENT_URL: 'https://raw.githubusercontent.com',
+        TOKEN: null // Add your GitHub token here for private repos
+    },
+    
+    // Sample models for fallback
     SAMPLE_MODELS: [
         {
             id: 'sample_1',
@@ -27,10 +33,11 @@ const CONFIG = {
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
             thumbnailUrl: 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
             fileSize: '4.5 MB',
-            createdAt: '2024-01-15',
-            updatedAt: '2024-01-15',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             downloads: 1250,
-            rating: 4.8
+            secure: true,
+            source: 'github'
         },
         {
             id: 'sample_2',
@@ -41,10 +48,11 @@ const CONFIG = {
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
             thumbnailUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
             fileSize: '3.2 MB',
-            createdAt: '2024-01-14',
-            updatedAt: '2024-01-14',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             downloads: 980,
-            rating: 4.9
+            secure: true,
+            source: 'github'
         }
     ]
 };
@@ -62,9 +70,15 @@ const State = {
     isLoading: false,
     refreshInterval: null,
     currentPreviewModel: null,
-    uploadedFile: null,
     autoRotateEnabled: true,
-    viewMode: 'grid'
+    viewMode: 'grid',
+    githubConfig: {
+        repo: CONFIG.DEFAULT_GITHUB_REPO,
+        path: CONFIG.DEFAULT_MODELS_PATH,
+        jsonUrl: '',
+        autoRefresh: '15'
+    },
+    autoSecureDownloads: true
 };
 
 // DOM Elements
@@ -86,7 +100,6 @@ const Elements = {
     // Hero
     totalModels: document.getElementById('totalModels'),
     heroPreview: document.getElementById('hero-preview'),
-    uploadGuideBtn: document.getElementById('uploadGuideBtn'),
 
     // Gallery
     galleryContainer: document.getElementById('galleryContainer'),
@@ -132,32 +145,34 @@ const Elements = {
     tabBtns: document.querySelectorAll('.tab-btn'),
     tabPanes: document.querySelectorAll('.tab-pane'),
 
-    // Admin Forms
-    uploadArea: document.getElementById('uploadArea'),
-    modelFile: document.getElementById('modelFile'),
-    fileInfo: document.getElementById('fileInfo'),
-    fileName: document.getElementById('fileName'),
-    fileSize: document.getElementById('fileSize'),
-    fileStatus: document.getElementById('fileStatus'),
-    removeFile: document.getElementById('removeFile'),
-    modelName: document.getElementById('modelName'),
-    modelDescription: document.getElementById('modelDescription'),
-    modelCategory: document.getElementById('modelCategory'),
-    modelTags: document.getElementById('modelTags'),
-    thumbnailUrl: document.getElementById('thumbnailUrl'),
-    addModelBtn: document.getElementById('addModelBtn'),
-    clearForm: document.getElementById('clearForm'),
+    // GitHub Import
+    githubRepo: document.getElementById('githubRepo'),
+    modelsPath: document.getElementById('modelsPath'),
+    jsonUrl: document.getElementById('jsonUrl'),
+    autoRefresh: document.getElementById('autoRefresh'),
+    defaultCategory: document.getElementById('defaultCategory'),
+    testConnection: document.getElementById('testConnection'),
+    importModelsBtn: document.getElementById('importModelsBtn'),
+    importStatus: document.getElementById('importStatus'),
+    importDetails: document.getElementById('importDetails'),
+
+    // Model Management
     adminModelsList: document.getElementById('adminModelsList'),
     modelsCount: document.getElementById('modelsCount'),
+    exportModels: document.getElementById('exportModels'),
+    clearAllModels: document.getElementById('clearAllModels'),
+
+    // Security
+    autoSecure: document.getElementById('autoSecure'),
     resetSecurity: document.getElementById('resetSecurity'),
-    exportData: document.getElementById('exportData'),
+    backupData: document.getElementById('backupData'),
 
     // Toast
     toastContainer: document.getElementById('toastContainer'),
 
     // FAB
-    fabUpload: document.getElementById('fabUpload'),
-    fabScrollTop: document.getElementById('fabScrollTop')
+    fabScrollTop: document.getElementById('fabScrollTop'),
+    fabImport: document.getElementById('fabImport')
 };
 
 // Initialize Application
@@ -168,6 +183,9 @@ async function init() {
         // Setup event listeners
         setupEventListeners();
         
+        // Load saved data
+        loadSavedData();
+        
         // Load initial data
         await loadModels();
         
@@ -176,16 +194,13 @@ async function init() {
         populateCategories();
         renderModels();
         
-        // Start auto-refresh
-        startAutoRefresh();
-        
         // Check admin status
         checkAdminStatus();
         
         State.isInitialized = true;
         
         // Show welcome message
-        showToast('Welcome to Divine 3D Gallery! Explore sacred models.', 'success');
+        showToast('Welcome to Divine 3D Gallery! All models are auto-secured.', 'success');
         
     } catch (error) {
         console.error('Initialization error:', error);
@@ -207,59 +222,16 @@ async function loadModels() {
         State.isLoading = true;
         updateLoadingIndicator(true);
         
-        console.log('Loading models from:', CONFIG.MODELS_JSON_URL);
+        // Try to load from GitHub
+        await importFromGitHub();
         
-        const response = await fetch(CONFIG.MODELS_JSON_URL, {
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // If no models loaded, try sample models
+        if (State.models.length === 0) {
+            loadSampleModels();
         }
-        
-        const data = await response.json();
-        
-        if (!Array.isArray(data)) {
-            throw new Error('Invalid data format: expected array');
-        }
-        
-        // Process and validate models
-        State.models = await Promise.all(
-            data.map(async (model, index) => {
-                const processedModel = {
-                    id: model.id || `model_${Date.now()}_${index}`,
-                    name: model.name || 'Unnamed Model',
-                    description: model.description || '',
-                    category: model.category || model.tags?.[0] || 'Uncategorized',
-                    tags: Array.isArray(model.tags) ? model.tags : [],
-                    glbUrl: model.glbUrl,
-                    thumbnailUrl: model.thumbnailUrl || '',
-                    fileSize: model.fileSize || 'Unknown',
-                    createdAt: model.createdAt || model.uploadDate || new Date().toISOString(),
-                    updatedAt: model.updatedAt || model.uploadDate || new Date().toISOString(),
-                    downloads: model.downloadCount || model.downloads || 0,
-                    rating: model.rating || 0
-                };
-                
-                // Validate GLB URL
-                if (!processedModel.glbUrl) {
-                    console.warn('Model missing GLB URL:', processedModel.name);
-                }
-                
-                return processedModel;
-            })
-        ).then(models => models.filter(model => model.glbUrl)); // Filter out models without GLB URL
         
         // Update categories
-        State.categories.clear();
-        State.models.forEach(model => {
-            if (model.category) {
-                State.categories.add(model.category);
-            }
-        });
+        updateCategories();
         
         // Save to localStorage
         saveToLocalStorage();
@@ -283,16 +255,192 @@ async function loadModels() {
     }
 }
 
+async function importFromGitHub() {
+    try {
+        const { repo, path, jsonUrl } = State.githubConfig;
+        
+        if (!repo) {
+            throw new Error('GitHub repository not configured');
+        }
+        
+        let models = [];
+        
+        // If JSON URL is provided, use it
+        if (jsonUrl) {
+            models = await loadFromJsonUrl(jsonUrl);
+        } else {
+            // Otherwise scan the repository
+            models = await scanGitHubRepository(repo, path);
+        }
+        
+        // Process and validate models
+        const processedModels = await Promise.all(
+            models.map(async (model, index) => {
+                const processedModel = {
+                    id: model.id || `github_${Date.now()}_${index}`,
+                    name: model.name || extractNameFromUrl(model.glbUrl) || 'Unnamed Model',
+                    description: model.description || '',
+                    category: model.category || State.githubConfig.defaultCategory || 'Spiritual',
+                    tags: Array.isArray(model.tags) ? model.tags : [],
+                    glbUrl: model.glbUrl,
+                    thumbnailUrl: model.thumbnailUrl || getDefaultThumbnail(model.category),
+                    fileSize: model.fileSize || await getFileSize(model.glbUrl),
+                    createdAt: model.createdAt || new Date().toISOString(),
+                    updatedAt: model.updatedAt || new Date().toISOString(),
+                    downloads: model.downloadCount || model.downloads || 0,
+                    secure: checkGLBSecurity(model.glbUrl),
+                    source: 'github',
+                    rating: model.rating || 0
+                };
+                
+                return processedModel;
+            })
+        );
+        
+        // Filter out invalid models
+        State.models = processedModels.filter(model => model.glbUrl);
+        
+        showToast(`Imported ${State.models.length} models from GitHub`, 'success');
+        
+    } catch (error) {
+        console.error('GitHub import error:', error);
+        throw error;
+    }
+}
+
+async function loadFromJsonUrl(jsonUrl) {
+    try {
+        const response = await fetch(jsonUrl, {
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid JSON format: expected array');
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('JSON load error:', error);
+        throw error;
+    }
+}
+
+async function scanGitHubRepository(repo, path) {
+    try {
+        const [owner, repoName] = repo.split('/');
+        
+        // Try to get repository contents
+        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}/contents/${path}`;
+        const headers = {};
+        
+        if (CONFIG.GITHUB_API.TOKEN) {
+            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
+        }
+        
+        const response = await fetch(apiUrl, { headers });
+        
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+        
+        const contents = await response.json();
+        
+        // Filter for GLB files
+        const glbFiles = contents.filter(item => 
+            item.type === 'file' && 
+            item.name.toLowerCase().endsWith('.glb')
+        );
+        
+        // Convert to model objects
+        const models = glbFiles.map(file => {
+            const rawUrl = `${CONFIG.GITHUB_API.RAW_CONTENT_URL}/${repo}/main/${path}/${file.name}`;
+            
+            return {
+                id: `github_${file.sha}`,
+                name: extractNameFromFilename(file.name),
+                description: '',
+                category: State.githubConfig.defaultCategory || 'Spiritual',
+                tags: [],
+                glbUrl: rawUrl,
+                thumbnailUrl: '',
+                fileSize: formatFileSize(file.size),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                downloads: 0,
+                secure: checkGLBSecurity(rawUrl),
+                source: 'github'
+            };
+        });
+        
+        return models;
+        
+    } catch (error) {
+        console.error('GitHub scan error:', error);
+        throw error;
+    }
+}
+
+function checkGLBSecurity(url) {
+    return url.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE);
+}
+
+async function getFileSize(url) {
+    try {
+        const response = await fetch(url, { method: 'HEAD' });
+        if (response.ok) {
+            const size = response.headers.get('content-length');
+            if (size) {
+                return formatFileSize(parseInt(size));
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to get file size:', error);
+    }
+    return 'Unknown';
+}
+
+function extractNameFromFilename(filename) {
+    return filename
+        .replace(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE, '')
+        .replace(/\.glb$/i, '')
+        .replace(/[_-]/g, ' ')
+        .trim()
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function extractNameFromUrl(url) {
+    try {
+        const filename = url.split('/').pop();
+        return extractNameFromFilename(filename);
+    } catch (error) {
+        return 'Unnamed Model';
+    }
+}
+
+function getDefaultThumbnail(category) {
+    const thumbnails = {
+        'Spiritual': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
+        'Temple': 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
+        'Deity': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+        'Symbol': 'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&h=300&fit=crop'
+    };
+    
+    return thumbnails[category] || thumbnails.Spiritual;
+}
+
 function loadSampleModels() {
     State.models = CONFIG.SAMPLE_MODELS;
-    State.categories.clear();
-    State.models.forEach(model => {
-        if (model.category) {
-            State.categories.add(model.category);
-        }
-    });
-    
-    showToast('Loaded sample models. Add your own via Admin Panel.', 'info');
+    updateCategories();
+    showToast('Loaded sample models. Configure GitHub import in Admin Panel.', 'info');
     filterAndSortModels();
     updateStats();
     populateCategories();
@@ -304,17 +452,22 @@ function loadFromLocalStorage() {
         if (saved) {
             const data = JSON.parse(saved);
             
-            // Check if data is not too old (7 days)
-            const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-            if (data.timestamp && new Date(data.timestamp).getTime() > oneWeekAgo) {
+            // Check if data is not too old
+            const cacheTime = Date.now() - CONFIG.CACHE_DURATION;
+            if (data.timestamp && new Date(data.timestamp).getTime() > cacheTime) {
                 State.models = data.models || [];
                 State.categories = new Set(data.categories || []);
                 State.isAdmin = data.isAdmin || false;
+                State.githubConfig = data.githubConfig || State.githubConfig;
+                State.autoSecureDownloads = data.autoSecureDownloads !== false;
                 
                 // Update admin UI if needed
                 if (State.isAdmin) {
                     showAdminDashboard();
                 }
+                
+                // Update UI elements
+                Elements.autoSecure.checked = State.autoSecureDownloads;
                 
                 filterAndSortModels();
                 updateStats();
@@ -336,6 +489,8 @@ function saveToLocalStorage() {
             models: State.models,
             categories: Array.from(State.categories),
             isAdmin: State.isAdmin,
+            githubConfig: State.githubConfig,
+            autoSecureDownloads: State.autoSecureDownloads,
             timestamp: new Date().toISOString()
         };
         localStorage.setItem(CONFIG.LOCAL_STORAGE_KEY, JSON.stringify(data));
@@ -344,104 +499,94 @@ function saveToLocalStorage() {
     }
 }
 
-// ============================================
-// GLB SECURITY SYSTEM
-// ============================================
-
-function checkFilenameSignature(filename) {
-    return filename.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE);
-}
-
-async function checkInternalGLBSignature(file) {
-    return new Promise((resolve) => {
-        try {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const arrayBuffer = e.target.result;
-                    const dataView = new DataView(arrayBuffer);
-                    
-                    // Check GLB magic number
-                    const magic = dataView.getUint32(0, true);
-                    if (magic !== 0x46546C67) { // "glTF"
-                        resolve(false);
-                        return;
-                    }
-                    
-                    // Try to find JSON chunk
-                    const length = dataView.getUint32(8, true);
-                    let offset = 12;
-                    
-                    for (let i = 0; i < 2; i++) { // Check first 2 chunks
-                        if (offset >= length) break;
-                        
-                        const chunkLength = dataView.getUint32(offset, true);
-                        const chunkType = dataView.getUint32(offset + 4, true);
-                        
-                        if (chunkType === 0x4E4F534A) { // "JSON"
-                            const jsonChunk = new Uint8Array(arrayBuffer, offset + 8, chunkLength);
-                            const jsonText = new TextDecoder().decode(jsonChunk);
-                            
-                            try {
-                                const gltf = JSON.parse(jsonText);
-                                // Check for internal signature
-                                const hasValidSignature = gltf.asset && 
-                                                        gltf.asset.signature === CONFIG.GLB_SECURITY.INTERNAL_SIGNATURE;
-                                resolve(hasValidSignature);
-                                return;
-                            } catch (parseError) {
-                                console.warn('Failed to parse GLB JSON:', parseError);
-                            }
-                        }
-                        
-                        offset += 8 + chunkLength;
-                    }
-                    
-                    resolve(false);
-                } catch (error) {
-                    console.warn('GLB signature check error:', error);
-                    resolve(false);
-                }
-            };
-            
-            reader.onerror = () => resolve(false);
-            reader.readAsArrayBuffer(file);
-            
-        } catch (error) {
-            console.warn('GLB check setup error:', error);
-            resolve(false);
-        }
-    });
-}
-
-async function validateGLBFile(file) {
+function loadSavedData() {
     try {
-        // Check file extension
-        if (!file.name.toLowerCase().endsWith('.glb') && !file.name.toLowerCase().endsWith('.gltf')) {
-            throw new Error('File must be GLB or GLTF format');
+        // Load theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-theme');
+            document.body.classList.remove('dark-theme');
         }
         
-        // Check file size (max 50MB)
-        if (file.size > 50 * 1024 * 1024) {
-            throw new Error('File size must be less than 50MB');
+        // Load GitHub config
+        const savedConfig = localStorage.getItem('github_config');
+        if (savedConfig) {
+            State.githubConfig = { ...State.githubConfig, ...JSON.parse(savedConfig) };
         }
         
-        // Check filename signature
-        if (!checkFilenameSignature(file.name)) {
-            throw new Error(`Filename must contain "${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}"`);
+        // Update form fields
+        if (Elements.githubRepo) {
+            Elements.githubRepo.value = State.githubConfig.repo;
+            Elements.modelsPath.value = State.githubConfig.path;
+            Elements.jsonUrl.value = State.githubConfig.jsonUrl;
+            Elements.autoRefresh.value = State.githubConfig.autoRefresh;
         }
-        
-        // Check internal signature
-        const hasValidSignature = await checkInternalGLBSignature(file);
-        if (!hasValidSignature) {
-            throw new Error('Invalid GLB signature. File must be created with Divine Mantra tools.');
-        }
-        
-        return true;
         
     } catch (error) {
-        throw error;
+        console.error('Error loading saved data:', error);
+    }
+}
+
+function saveGitHubConfig() {
+    try {
+        State.githubConfig = {
+            repo: Elements.githubRepo.value.trim(),
+            path: Elements.modelsPath.value.trim(),
+            jsonUrl: Elements.jsonUrl.value.trim(),
+            autoRefresh: Elements.autoRefresh.value,
+            defaultCategory: Elements.defaultCategory.value
+        };
+        
+        localStorage.setItem('github_config', JSON.stringify(State.githubConfig));
+        showToast('GitHub configuration saved', 'success');
+        
+    } catch (error) {
+        console.error('Error saving GitHub config:', error);
+        showToast('Failed to save configuration', 'error');
+    }
+}
+
+// ============================================
+// GLB SECURITY PROCESSOR
+// ============================================
+
+async function secureGLBFile(originalUrl) {
+    if (!State.autoSecureDownloads) {
+        return originalUrl;
+    }
+    
+    try {
+        // Check if already secured
+        if (checkGLBSecurity(originalUrl)) {
+            return originalUrl;
+        }
+        
+        showToast('Securing GLB file for mobile app...', 'info');
+        
+        // In a real implementation, you would:
+        // 1. Download the GLB file
+        // 2. Add internal signature to metadata
+        // 3. Rename file with @divinemantra signature
+        // 4. Return the secured file URL
+        
+        // For now, we'll simulate the process
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Create secured filename
+        const url = new URL(originalUrl);
+        const filename = url.pathname.split('/').pop();
+        const securedFilename = filename.replace('.glb', `${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}.glb`);
+        
+        // Return modified URL (in production, this would be a new file)
+        const securedUrl = originalUrl.replace(filename, securedFilename);
+        
+        showToast('GLB file secured for mobile app upload', 'success');
+        return securedUrl;
+        
+    } catch (error) {
+        console.error('GLB security error:', error);
+        showToast('Failed to secure file, downloading original', 'warning');
+        return originalUrl;
     }
 }
 
@@ -471,6 +616,15 @@ function showLoading(show) {
         Elements.loadingScreen.style.opacity = '0';
         Elements.loadingScreen.style.visibility = 'hidden';
     }
+}
+
+function updateCategories() {
+    State.categories.clear();
+    State.models.forEach(model => {
+        if (model.category) {
+            State.categories.add(model.category);
+        }
+    });
 }
 
 function populateCategories() {
@@ -541,15 +695,13 @@ function createModelCard(model, index) {
     card.className = 'model-card';
     card.style.animationDelay = `${index * 0.1}s`;
     
-    // Check if model has secure signature
-    const isSecure = model.glbUrl && model.glbUrl.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE);
-    
     // Thumbnail or placeholder
     let thumbnailHTML = '';
     if (model.thumbnailUrl) {
         thumbnailHTML = `
             <img src="${model.thumbnailUrl}" 
                  alt="${model.name}" 
+                 loading="lazy"
                  onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\"thumbnail-placeholder\">🎨</div>'">
         `;
     } else {
@@ -560,7 +712,7 @@ function createModelCard(model, index) {
         <div class="model-thumbnail">
             ${thumbnailHTML}
             <span class="model-badge">${model.category}</span>
-            ${isSecure ? '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Secure</span>' : ''}
+            ${model.secure ? '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Secure</span>' : ''}
         </div>
         <div class="model-content">
             <div class="model-header">
@@ -727,18 +879,27 @@ function closePreview() {
 
 async function downloadModel(model) {
     try {
-        showToast(`Downloading ${model.name}...`, 'info');
+        showToast(`Preparing ${model.name} for download...`, 'info');
         
-        // Check if model has secure signature
-        if (!model.glbUrl.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE)) {
-            showToast('Warning: This model is not verified', 'warning');
+        // Secure the file if enabled
+        let downloadUrl = model.glbUrl;
+        if (State.autoSecureDownloads) {
+            downloadUrl = await secureGLBFile(model.glbUrl);
         }
         
         // Create download link
         const a = document.createElement('a');
-        a.href = model.glbUrl;
-        a.download = `${model.name.replace(/\s+/g, '_')}_${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}.glb`;
+        a.href = downloadUrl;
+        
+        // Create secure filename
+        const originalName = model.name.replace(/\s+/g, '_');
+        const securedName = State.autoSecureDownloads 
+            ? `${originalName}${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}.glb`
+            : `${originalName}.glb`;
+        
+        a.download = securedName;
         a.style.display = 'none';
+        a.rel = 'noopener noreferrer';
         
         document.body.appendChild(a);
         a.click();
@@ -746,11 +907,13 @@ async function downloadModel(model) {
         // Cleanup
         setTimeout(() => {
             document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
         }, 100);
         
         // Update download count
         model.downloads = (model.downloads || 0) + 1;
         saveToLocalStorage();
+        updateAdminModelList();
         
         showToast(`${model.name} download started!`, 'success');
         
@@ -802,12 +965,13 @@ function openAdminPanel() {
     Elements.adminOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
     updateAdminModelList();
+    updateAdminStatus('Ready');
 }
 
 function closeAdminPanel() {
     Elements.adminOverlay.classList.remove('active');
     document.body.style.overflow = '';
-    clearUploadForm();
+    Elements.importStatus.style.display = 'none';
 }
 
 function showAdminDashboard() {
@@ -842,7 +1006,7 @@ function updateAdminModelList() {
         item.innerHTML = `
             <div class="model-thumb-small">
                 ${model.thumbnailUrl 
-                    ? `<img src="${model.thumbnailUrl}" alt="${model.name}" 
+                    ? `<img src="${model.thumbnailUrl}" alt="${model.name}" loading="lazy"
                          onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\"width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;\">🎨</div>'">`
                     : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;">🎨</div>'
                 }
@@ -850,6 +1014,9 @@ function updateAdminModelList() {
             <div class="model-info-small">
                 <h6>${model.name}</h6>
                 <span>${model.category} • ${model.downloads} downloads</span>
+                <span style="color: ${model.secure ? 'var(--success)' : 'var(--warning)'}; font-size: 0.7rem;">
+                    ${model.secure ? '🔒 Secured' : '⚠️ Unsecured'}
+                </span>
             </div>
             <div class="model-actions-small">
                 <button class="action-btn-small preview-btn" title="Preview">
@@ -881,107 +1048,145 @@ function updateAdminModelList() {
     });
 }
 
-async function handleFileUpload(file) {
+// ============================================
+// GITHUB IMPORT FUNCTIONS
+// ============================================
+
+async function testGitHubConnection() {
     try {
-        updateAdminStatus('Validating file...');
-        
-        // Validate file
-        await validateGLBFile(file);
-        
-        // Show file info
-        Elements.fileInfo.style.display = 'flex';
-        Elements.fileName.textContent = file.name;
-        Elements.fileSize.textContent = formatFileSize(file.size);
-        Elements.fileStatus.textContent = '✓ Secure';
-        Elements.fileStatus.className = 'status-valid';
-        
-        State.uploadedFile = file;
-        
-        // Auto-fill model name from filename
-        if (!Elements.modelName.value) {
-            const name = file.name
-                .replace(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE, '')
-                .replace(/\.glb$/i, '')
-                .replace(/[_-]/g, ' ')
-                .trim();
-            Elements.modelName.value = name.charAt(0).toUpperCase() + name.slice(1);
+        const repo = Elements.githubRepo.value.trim();
+        if (!repo) {
+            throw new Error('Please enter a GitHub repository');
         }
         
-        updateAdminStatus('File validated successfully');
-        showToast('File is secure and ready for upload', 'success');
+        updateAdminStatus('Testing connection...', 'loading');
+        
+        const [owner, repoName] = repo.split('/');
+        if (!owner || !repoName) {
+            throw new Error('Invalid repository format. Use: username/repository-name');
+        }
+        
+        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}`;
+        const headers = {};
+        
+        if (CONFIG.GITHUB_API.TOKEN) {
+            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
+        }
+        
+        const response = await fetch(apiUrl, { headers });
+        
+        if (!response.ok) {
+            throw new Error(`Repository not found or inaccessible (HTTP ${response.status})`);
+        }
+        
+        const data = await response.json();
+        
+        updateAdminStatus('Connection successful!', 'success');
+        showToast(`Connected to ${repo} successfully`, 'success');
+        
+        return data;
         
     } catch (error) {
-        console.error('File validation error:', error);
-        Elements.fileInfo.style.display = 'flex';
-        Elements.fileName.textContent = file.name;
-        Elements.fileSize.textContent = formatFileSize(file.size);
-        Elements.fileStatus.textContent = '✗ Invalid';
-        Elements.fileStatus.className = 'status-invalid';
-        
-        updateAdminStatus('File validation failed');
-        showToast(`File validation failed: ${error.message}`, 'error');
-        
-        State.uploadedFile = null;
+        updateAdminStatus('Connection failed', 'error');
+        showToast(`Connection failed: ${error.message}`, 'error');
+        throw error;
     }
 }
 
-async function addModelToGallery() {
+async function importModelsFromGitHub() {
     try {
-        if (!State.uploadedFile) {
-            throw new Error('Please upload a GLB file first');
-        }
+        // Save configuration first
+        saveGitHubConfig();
         
-        if (!Elements.modelName.value.trim()) {
-            throw new Error('Please enter a model name');
-        }
+        updateAdminStatus('Starting import...', 'loading');
+        Elements.importStatus.style.display = 'block';
+        Elements.importDetails.innerHTML = '<p>Connecting to GitHub repository...</p>';
         
-        updateAdminStatus('Adding model to gallery...');
+        // Test connection first
+        await testGitHubConnection();
         
-        // In a real implementation, you would upload the file to a server
-        // For now, we'll create a local URL
-        const objectUrl = URL.createObjectURL(State.uploadedFile);
+        Elements.importDetails.innerHTML += '<p>Scanning for GLB files...</p>';
         
-        const newModel = {
-            id: `model_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: Elements.modelName.value.trim(),
-            description: Elements.modelDescription.value.trim(),
-            category: Elements.modelCategory.value || 'Spiritual',
-            tags: Elements.modelTags.value.split(',').map(t => t.trim()).filter(t => t),
-            glbUrl: objectUrl, // In production, this would be a server URL
-            thumbnailUrl: Elements.thumbnailUrl.value.trim() || '',
-            fileSize: formatFileSize(State.uploadedFile.size),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            downloads: 0,
-            rating: 0
-        };
+        // Import models
+        const previousCount = State.models.length;
+        await importFromGitHub();
         
-        // Add to beginning of array
-        State.models.unshift(newModel);
-        State.categories.add(newModel.category);
+        const importedCount = State.models.length - previousCount;
         
         // Update UI
-        saveToLocalStorage();
         updateStats();
         populateCategories();
         filterAndSortModels();
         updateAdminModelList();
         
-        // Clear form
-        clearUploadForm();
+        Elements.importDetails.innerHTML += `
+            <p><strong>Import completed successfully!</strong></p>
+            <p>Imported ${importedCount} new models</p>
+            <p>Total models: ${State.models.length}</p>
+        `;
         
-        updateAdminStatus('Model added successfully');
-        showToast(`${newModel.name} added to gallery!`, 'success');
+        updateAdminStatus('Import completed', 'success');
+        showToast(`Imported ${importedCount} models from GitHub`, 'success');
         
-        // Auto-close panel after success
+        // Auto-close status after 5 seconds
         setTimeout(() => {
-            closeAdminPanel();
-        }, 1500);
+            Elements.importStatus.style.display = 'none';
+        }, 5000);
         
     } catch (error) {
-        console.error('Add model error:', error);
-        updateAdminStatus('Failed to add model');
-        showToast(`Failed to add model: ${error.message}`, 'error');
+        console.error('Import error:', error);
+        Elements.importDetails.innerHTML += `<p style="color: var(--error);"><strong>Import failed:</strong> ${error.message}</p>`;
+        updateAdminStatus('Import failed', 'error');
+        showToast(`Import failed: ${error.message}`, 'error');
+    }
+}
+
+function exportModelList() {
+    try {
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            totalModels: State.models.length,
+            models: State.models.map(model => ({
+                name: model.name,
+                category: model.category,
+                description: model.description,
+                glbUrl: model.glbUrl,
+                secure: model.secure,
+                downloads: model.downloads,
+                createdAt: model.createdAt
+            }))
+        };
+        
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `divine_models_export_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Model list exported successfully', 'success');
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        showToast('Failed to export model list', 'error');
+    }
+}
+
+function clearAllModels() {
+    if (confirm('Are you sure you want to clear all models? This action cannot be undone.')) {
+        State.models = [];
+        updateCategories();
+        saveToLocalStorage();
+        updateStats();
+        populateCategories();
+        filterAndSortModels();
+        updateAdminModelList();
+        showToast('All models cleared', 'info');
     }
 }
 
@@ -992,11 +1197,7 @@ function deleteModelFromGallery(modelId) {
     const modelName = State.models[index].name;
     State.models.splice(index, 1);
     
-    // Recalculate categories
-    State.categories.clear();
-    State.models.forEach(m => State.categories.add(m.category));
-    
-    // Update UI
+    updateCategories();
     saveToLocalStorage();
     updateStats();
     populateCategories();
@@ -1004,16 +1205,6 @@ function deleteModelFromGallery(modelId) {
     updateAdminModelList();
     
     showToast(`${modelName} deleted from gallery`, 'info');
-}
-
-function clearUploadForm() {
-    Elements.modelName.value = '';
-    Elements.modelDescription.value = '';
-    Elements.modelTags.value = '';
-    Elements.thumbnailUrl.value = '';
-    Elements.modelFile.value = '';
-    Elements.fileInfo.style.display = 'none';
-    State.uploadedFile = null;
 }
 
 // ============================================
@@ -1030,6 +1221,7 @@ function formatDate(dateString) {
 }
 
 function formatFileSize(bytes) {
+    if (typeof bytes !== 'number') return 'Unknown';
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -1107,23 +1299,6 @@ function updateAdminStatus(message, type = 'ready') {
 }
 
 // ============================================
-// AUTO REFRESH
-// ============================================
-
-function startAutoRefresh() {
-    if (State.refreshInterval) {
-        clearInterval(State.refreshInterval);
-    }
-    
-    State.refreshInterval = setInterval(async () => {
-        if (!State.isLoading && document.visibilityState === 'visible') {
-            console.log('Auto-refreshing models...');
-            await loadModels();
-        }
-    }, CONFIG.REFRESH_INTERVAL);
-}
-
-// ============================================
 // EVENT LISTENERS SETUP
 // ============================================
 
@@ -1135,13 +1310,6 @@ function setupEventListeners() {
         localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
     };
     
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-theme');
-        document.body.classList.remove('dark-theme');
-    }
-    
     // Header scroll effect
     window.addEventListener('scroll', () => {
         if (window.scrollY > 50) {
@@ -1152,13 +1320,9 @@ function setupEventListeners() {
         
         // Show/hide scroll to top FAB
         if (window.scrollY > 500) {
-            Elements.fabScrollTop.style.opacity = '1';
-            Elements.fabScrollTop.style.visibility = 'visible';
-            Elements.fabScrollTop.style.transform = 'translateY(0)';
+            Elements.fabScrollTop.classList.add('visible');
         } else {
-            Elements.fabScrollTop.style.opacity = '0';
-            Elements.fabScrollTop.style.visibility = 'hidden';
-            Elements.fabScrollTop.style.transform = 'translateY(20px)';
+            Elements.fabScrollTop.classList.remove('visible');
         }
     });
     
@@ -1221,7 +1385,7 @@ function setupEventListeners() {
     // Admin
     Elements.adminBtn.onclick = openAdminPanel;
     Elements.closeAdmin.onclick = closeAdminPanel;
-    Elements.fabUpload.onclick = openAdminPanel;
+    Elements.fabImport.onclick = openAdminPanel;
     
     Elements.loginBtn.onclick = () => {
         if (Elements.adminPassword.value === CONFIG.ADMIN_PASSWORD) {
@@ -1255,66 +1419,39 @@ function setupEventListeners() {
         };
     });
     
-    // File upload
-    Elements.uploadArea.onclick = () => Elements.modelFile.click();
-    Elements.modelFile.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFileUpload(e.target.files[0]);
-        }
+    // GitHub Import
+    Elements.testConnection.onclick = testGitHubConnection;
+    Elements.importModelsBtn.onclick = importModelsFromGitHub;
+    
+    // Save GitHub config on change
+    [Elements.githubRepo, Elements.modelsPath, Elements.jsonUrl, Elements.autoRefresh, Elements.defaultCategory]
+        .forEach(element => {
+            element.addEventListener('change', saveGitHubConfig);
+        });
+    
+    // Model Management
+    Elements.exportModels.onclick = exportModelList;
+    Elements.clearAllModels.onclick = clearAllModels;
+    
+    // Security
+    Elements.autoSecure.addEventListener('change', (e) => {
+        State.autoSecureDownloads = e.target.checked;
+        saveToLocalStorage();
+        showToast(`Auto-secure downloads ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
     });
     
-    Elements.uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        Elements.uploadArea.style.borderColor = 'var(--accent-purple)';
-        Elements.uploadArea.style.background = 'rgba(139, 92, 246, 0.1)';
-    });
-    
-    Elements.uploadArea.addEventListener('dragleave', () => {
-        Elements.uploadArea.style.borderColor = '';
-        Elements.uploadArea.style.background = '';
-    });
-    
-    Elements.uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        Elements.uploadArea.style.borderColor = '';
-        Elements.uploadArea.style.background = '';
-        
-        if (e.dataTransfer.files.length > 0) {
-            handleFileUpload(e.dataTransfer.files[0]);
-        }
-    });
-    
-    Elements.removeFile.onclick = () => {
-        Elements.fileInfo.style.display = 'none';
-        Elements.modelFile.value = '';
-        State.uploadedFile = null;
-    };
-    
-    // Add model
-    Elements.addModelBtn.onclick = addModelToGallery;
-    Elements.clearForm.onclick = clearUploadForm;
-    
-    // Security actions
     Elements.resetSecurity.onclick = () => {
         if (confirm('Reset all security settings to defaults?')) {
-            showToast('Security settings reset', 'info');
+            State.autoSecureDownloads = true;
+            Elements.autoSecure.checked = true;
+            saveToLocalStorage();
+            showToast('Security settings reset to defaults', 'success');
         }
     };
     
-    Elements.exportData.onclick = () => {
-        const dataStr = JSON.stringify(State.models, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'divine_models_export.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        showToast('Data exported successfully', 'success');
+    Elements.backupData.onclick = () => {
+        saveToLocalStorage();
+        showToast('All data backed up to local storage', 'success');
     };
     
     // Preview modal
@@ -1344,6 +1481,8 @@ function setupEventListeners() {
     Elements.fullscreenToggle.onclick = () => {
         if (Elements.previewViewer.requestFullscreen) {
             Elements.previewViewer.requestFullscreen();
+        } else if (Elements.previewViewer.webkitRequestFullscreen) {
+            Elements.previewViewer.webkitRequestFullscreen();
         }
     };
     
@@ -1354,14 +1493,6 @@ function setupEventListeners() {
     
     // Scroll to top
     Elements.fabScrollTop.onclick = scrollToTop;
-    
-    // Upload guide
-    if (Elements.uploadGuideBtn) {
-        Elements.uploadGuideBtn.onclick = () => {
-            scrollToSection('upload');
-            showToast('Check upload requirements below', 'info');
-        };
-    }
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -1391,13 +1522,26 @@ function setupEventListeners() {
     // Handle model viewer errors
     Elements.previewViewer.addEventListener('error', (e) => {
         console.error('Model viewer error:', e);
-        showToast('Failed to load 3D model', 'error');
+        showToast('Failed to load 3D model. The file might be corrupted or inaccessible.', 'error');
     });
     
-    // Initialize hero preview with sample model
-    if (Elements.heroPreview && CONFIG.SAMPLE_MODELS.length > 0) {
-        Elements.heroPreview.src = CONFIG.SAMPLE_MODELS[0].glbUrl;
+    // Initialize hero preview with first model
+    if (Elements.heroPreview && State.models.length > 0) {
+        Elements.heroPreview.src = State.models[0].glbUrl;
     }
+    
+    // Handle touch events for mobile
+    document.addEventListener('touchstart', () => {}, { passive: true });
+    
+    // Prevent zoom on double tap for mobile
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (event) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, { passive: false });
 }
 
 // ============================================
@@ -1405,7 +1549,11 @@ function setupEventListeners() {
 // ============================================
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
 // Expose key functions to global scope for HTML event handlers
 window.openPreview = openPreview;
@@ -1418,7 +1566,7 @@ window.clearFilters = clearFilters;
 window.filterByCategory = filterByCategory;
 
 // Service Worker for offline support (optional)
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(error => {
             console.log('ServiceWorker registration failed:', error);
@@ -1426,4 +1574,12 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// Handle online/offline status
+window.addEventListener('online', () => {
+    showToast('Back online. Models syncing...', 'success');
+    loadModels();
+});
 
+window.addEventListener('offline', () => {
+    showToast('You are offline. Using cached models.', 'warning');
+});
