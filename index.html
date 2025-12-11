@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Divine 3D Gallery | Premium GLB Models</title>
+    <title>Divine 3D Gallery | Premium GLB Models + App Download</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -51,6 +51,9 @@
                     <a href="#gallery" class="nav-link">Models</a>
                     <a href="#categories" class="nav-link">Categories</a>
                     <a href="#import" class="nav-link">Import</a>
+                    <a href="#download-app" class="nav-link download-app-link">
+                        <i class="fas fa-download"></i> Get App
+                    </a>
                 </div>
             </nav>
             
@@ -67,6 +70,12 @@
                     <i class="fas fa-sun"></i>
                 </button>
                 
+                <!-- APK Download Button -->
+                <button class="apk-download-btn" id="apkDownloadBtn" title="Download DivineMantra App">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span class="btn-text">Get App</span>
+                </button>
+                
                 <button class="admin-btn" id="adminBtn">
                     <i class="fas fa-user-shield"></i>
                     <span class="btn-text">Admin</span>
@@ -79,18 +88,81 @@
         </div>
     </header>
 
+    <!-- APK Download Modal -->
+    <div class="apk-modal-overlay" id="apkModal">
+        <div class="apk-modal-container">
+            <div class="apk-modal-header">
+                <h3><i class="fas fa-mobile-alt"></i> DivineMantra App</h3>
+                <button class="apk-modal-close" id="closeApkModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="apk-modal-body">
+                <div class="apk-icon">
+                    <i class="fas fa-praying-hands"></i>
+                </div>
+                
+                <h4>Download DivineMantra APK</h4>
+                <p class="apk-description">
+                    Experience sacred 3D models on your mobile device. 
+                    The app supports all secured GLB files from this gallery.
+                </p>
+                
+                <div class="apk-info">
+                    <div class="apk-info-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Secured with Divine Mantra</span>
+                    </div>
+                    <div class="apk-info-item">
+                        <i class="fas fa-bolt"></i>
+                        <span>Fast & Lightweight</span>
+                    </div>
+                    <div class="apk-info-item">
+                        <i class="fas fa-sync"></i>
+                        <span>Auto Sync with Gallery</span>
+                    </div>
+                </div>
+                
+                <a href="docs/app-debug.apk" class="apk-download-link" id="apkDownloadLink" download>
+                    <i class="fas fa-download"></i>
+                    <div class="apk-download-text">
+                        <div class="apk-download-title">Download DivineMantra APK</div>
+                        <div class="apk-download-size" id="apkSize">Loading size...</div>
+                    </div>
+                </a>
+                
+                <div class="apk-instructions">
+                    <h5><i class="fas fa-info-circle"></i> Installation Instructions</h5>
+                    <ol>
+                        <li>Tap the download button above</li>
+                        <li>Open the downloaded APK file</li>
+                        <li>Allow "Install from unknown sources" if prompted</li>
+                        <li>Follow the installation steps</li>
+                        <li>Launch the app and enjoy!</li>
+                    </ol>
+                </div>
+                
+                <div class="apk-version">
+                    <i class="fas fa-code-branch"></i>
+                    <span>Version 1.0.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Hero Section -->
     <section class="hero-section" id="hero">
         <div class="hero-content">
             <div class="hero-text">
                 <h2 class="hero-title">
                     <span class="gradient-text">Divine 3D Gallery</span>
-                    <span class="hero-subtitle">Secure GLB Models Collection</span>
+                    <span class="hero-subtitle">Secure GLB Models + Mobile App</span>
                 </h2>
                 <p class="hero-description">
                     Explore our curated collection of sacred 3D models. 
                     All GLB files are automatically secured with Divine Mantra signature 
-                    for seamless upload to our mobile app.
+                    for seamless upload to our mobile app. Download the app now!
                 </p>
                 <div class="hero-stats">
                     <div class="stat">
@@ -98,20 +170,29 @@
                         <div class="stat-label">Models</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-number" id="activeUsers">1000000000K</div>
+                        <div class="stat-number" id="activeUsers">1000K</div>
                         <div class="stat-label">Devotees</div>
                     </div>
                     <div class="stat">
                         <div class="stat-number">100%</div>
                         <div class="stat-label">Secure</div>
                     </div>
+                    <div class="stat">
+                        <div class="stat-number">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="stat-label">App Ready</div>
+                    </div>
                 </div>
                 <div class="hero-actions">
                     <button class="hero-btn primary" onclick="scrollToSection('gallery')">
                         <i class="fas fa-eye"></i> Browse Models
                     </button>
-                    <button class="hero-btn secondary" id="importGuideBtn">
-                        <i class="fas fa-download"></i> Import Guide
+                    <button class="hero-btn secondary" id="openApkModalBtn">
+                        <i class="fas fa-download"></i> Download App
+                    </button>
+                    <button class="hero-btn tertiary" onclick="scrollToSection('import')">
+                        <i class="fas fa-github"></i> Import Guide
                     </button>
                 </div>
             </div>
@@ -138,7 +219,6 @@
             <i class="fas fa-chevron-down"></i>
         </div>
     </section>
-
 
     <!-- Security Features Section -->
     <section class="features-section">
@@ -258,10 +338,10 @@
             <div class="step">
                 <div class="step-number">1</div>
                 <div class="step-content">
-                    <h3></h3>
-                    <p></p>
+                    <h3>Configure GitHub Repository</h3>
+                    <p>Set up your GitHub repository in the Admin Panel</p>
                     <div class="step-example">
-                        <code></code>
+                        <code>shank122004-tech/DivineAppWeb</code>
                     </div>
                 </div>
             </div>
@@ -272,7 +352,7 @@
                     <h3>Auto-Scan Models</h3>
                     <p>System automatically scans for GLB files in /models folder</p>
                     <div class="step-example">
-                        <code></code>
+                        <code>https://raw.githubusercontent.com/.../*.glb</code>
                     </div>
                 </div>
             </div>
@@ -431,7 +511,7 @@
                         <button class="login-btn" id="loginBtn">
                             <i class="fas fa-unlock"></i> Unlock Panel
                         </button>
-                        <p class="login-hint">Default password: <code>admin123</code></p>
+                        <p class="login-hint">Default password: <code>Shashank@122004</code></p>
                     </div>
                 </div>
                 
@@ -628,6 +708,9 @@
         <button class="fab primary" id="fabImport" onclick="openAdminPanel()">
             <i class="fab fa-github"></i>
         </button>
+        <button class="fab secondary" onclick="openApkModal()">
+            <i class="fas fa-mobile-alt"></i>
+        </button>
         <button class="fab secondary" id="fabScrollTop" onclick="scrollToTop()">
             <i class="fas fa-arrow-up"></i>
         </button>
@@ -636,11 +719,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
