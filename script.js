@@ -1279,7 +1279,7 @@ async function importModelsFromGitHub() {
         }
         
         updateAdminStatus('Import completed', 'success');
-        showToast(`Imported ${importedCount} models from GitHub`, 'success');
+        showToast(`Imported ${importedCount} models from Spiritual Server`, 'success');
         
         setTimeout(() => {
             if (Elements.importStatus) Elements.importStatus.style.display = 'none';
@@ -1834,5 +1834,6 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
+
 
 
