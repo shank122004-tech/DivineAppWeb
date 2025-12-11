@@ -2,12 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Divine 3D Gallery | Premium GLB Models</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body class="dark-theme">
     <!-- Loading Screen -->
@@ -46,7 +50,7 @@
                     <a href="#hero" class="nav-link active">Home</a>
                     <a href="#gallery" class="nav-link">Models</a>
                     <a href="#categories" class="nav-link">Categories</a>
-                    <a href="#upload" class="nav-link">Upload</a>
+                    <a href="#import" class="nav-link">Import</a>
                 </div>
             </nav>
             
@@ -81,12 +85,12 @@
             <div class="hero-text">
                 <h2 class="hero-title">
                     <span class="gradient-text">Divine 3D Gallery</span>
-                    <span class="hero-subtitle">Sacred GLB Models Collection</span>
+                    <span class="hero-subtitle">Secure GLB Models Collection</span>
                 </h2>
                 <p class="hero-description">
                     Explore our curated collection of sacred 3D models. 
-                    Preview, download, and experience divine GLB assets with 
-                    our secure WebGL viewer.
+                    All GLB files are automatically secured with Divine Mantra signature 
+                    for seamless upload to our mobile app.
                 </p>
                 <div class="hero-stats">
                     <div class="stat">
@@ -98,16 +102,16 @@
                         <div class="stat-label">Devotees</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-number">∞</div>
-                        <div class="stat-label">Blessings</div>
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">Secure</div>
                     </div>
                 </div>
                 <div class="hero-actions">
                     <button class="hero-btn primary" onclick="scrollToSection('gallery')">
                         <i class="fas fa-eye"></i> Browse Models
                     </button>
-                    <button class="hero-btn secondary" id="uploadGuideBtn">
-                        <i class="fas fa-upload"></i> Upload Guide
+                    <button class="hero-btn secondary" id="importGuideBtn">
+                        <i class="fas fa-download"></i> Import Guide
                     </button>
                 </div>
             </div>
@@ -135,33 +139,33 @@
         </div>
     </section>
 
-    <!-- Features Section -->
+    <!-- Security Features Section -->
     <section class="features-section">
         <div class="section-header">
-            <h2 class="section-title">Why Choose Divine Gallery</h2>
-            <p class="section-subtitle">Secure, premium, and spiritually curated</p>
+            <h2 class="section-title">Automatic Security Features</h2>
+            <p class="section-subtitle">All GLB files are automatically secured for mobile app upload</p>
         </div>
         
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🔒</div>
-                <h3 class="feature-title">Secure Models</h3>
-                <p class="feature-desc">All GLB files are verified and secure with digital signatures</p>
+                <h3 class="feature-title">Auto-Signature</h3>
+                <p class="feature-desc">Automatically adds @divinemantra signature to downloaded GLB files</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🚀</div>
-                <h3 class="feature-title">Fast Preview</h3>
-                <p class="feature-desc">Instant 3D preview with WebGL, no downloads needed</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎨</div>
-                <h3 class="feature-title">Premium Quality</h3>
-                <p class="feature-desc">High-quality models with optimized textures and geometry</p>
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">Fast Processing</h3>
+                <p class="feature-desc">Instantly secures files without compromising quality</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📱</div>
-                <h3 class="feature-title">Mobile Ready</h3>
-                <p class="feature-desc">Full responsive design with AR support on mobile</p>
+                <h3 class="feature-title">App Ready</h3>
+                <p class="feature-desc">Secured files upload seamlessly to mobile app</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3 class="feature-title">Batch Import</h3>
+                <p class="feature-desc">Import multiple models from GitHub automatically</p>
             </div>
         </div>
     </section>
@@ -242,21 +246,21 @@
         </div>
     </section>
 
-    <!-- Upload Guide Section -->
-    <section class="upload-section" id="upload">
+    <!-- Import Section -->
+    <section class="import-section" id="import">
         <div class="section-header">
-            <h2 class="section-title">How to Upload Models</h2>
-            <p class="section-subtitle">Follow these steps to add secure GLB files</p>
+            <h2 class="section-title">Import from GitHub</h2>
+            <p class="section-subtitle">Automatically import models from your GitHub repository</p>
         </div>
         
-        <div class="upload-steps">
+        <div class="import-steps">
             <div class="step">
                 <div class="step-number">1</div>
                 <div class="step-content">
-                    <h3>Prepare Your GLB File</h3>
-                    <p>Ensure your file has the <code>@divinemantra</code> signature in filename</p>
+                    <h3>Configure Repository</h3>
+                    <p>Enter your GitHub repository details</p>
                     <div class="step-example">
-                        <code>your_model@divinemantra.glb</code>
+                        <code>username/repository-name</code>
                     </div>
                 </div>
             </div>
@@ -264,10 +268,10 @@
             <div class="step">
                 <div class="step-number">2</div>
                 <div class="step-content">
-                    <h3>Add Internal Signature</h3>
-                    <p>Include the security signature in your GLB metadata</p>
+                    <h3>Auto-Scan Models</h3>
+                    <p>System automatically scans for GLB files in /models folder</p>
                     <div class="step-example">
-                        <code>"signature": "DM-9937-SECURE-CODE"</code>
+                        <code>/models/*.glb</code>
                     </div>
                 </div>
             </div>
@@ -275,10 +279,10 @@
             <div class="step">
                 <div class="step-number">3</div>
                 <div class="step-content">
-                    <h3>Upload via Admin Panel</h3>
-                    <p>Use the admin panel to securely upload your verified model</p>
+                    <h3>Batch Import</h3>
+                    <p>Import all models at once with automatic security</p>
                     <button class="action-btn" onclick="openAdminPanel()">
-                        <i class="fas fa-lock"></i> Open Admin Panel
+                        <i class="fas fa-github"></i> Configure Import
                     </button>
                 </div>
             </div>
@@ -353,8 +357,14 @@
                                     <span class="info-value" id="previewSize">-</span>
                                 </div>
                                 <div class="info-item">
-                                    <span class="info-label">Upload Date:</span>
+                                    <span class="info-label">Import Date:</span>
                                     <span class="info-value" id="previewDate">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Status:</span>
+                                    <span class="info-value" id="previewStatus">
+                                        <i class="fas fa-shield-alt" style="color: var(--success);"></i> Secured
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -376,7 +386,7 @@
                     
                     <div class="preview-actions">
                         <button class="action-btn download-btn" id="downloadModel">
-                            <i class="fas fa-download"></i> Download GLB
+                            <i class="fas fa-download"></i> Download Secured GLB
                         </button>
                         <button class="action-btn copy-btn" id="copyUrl">
                             <i class="fas fa-copy"></i> Copy URL
@@ -427,8 +437,8 @@
                 <!-- Dashboard Screen -->
                 <div class="admin-dashboard" id="adminDashboard" style="display: none;">
                     <div class="dashboard-tabs">
-                        <button class="tab-btn active" data-tab="upload">
-                            <i class="fas fa-upload"></i> Upload Model
+                        <button class="tab-btn active" data-tab="github">
+                            <i class="fab fa-github"></i> GitHub Import
                         </button>
                         <button class="tab-btn" data-tab="manage">
                             <i class="fas fa-list"></i> Manage Models
@@ -439,83 +449,75 @@
                     </div>
                     
                     <div class="tab-content">
-                        <!-- Upload Tab -->
-                        <div class="tab-pane active" id="uploadTab">
-                            <div class="upload-guide">
-                                <h5><i class="fas fa-info-circle"></i> Important Notes</h5>
-                                <ul>
-                                    <li>Filename must contain <code>@divinemantra</code></li>
-                                    <li>GLB must have internal signature: <code>DM-9937-SECURE-CODE</code></li>
-                                    <li>Max file size: 50MB</li>
-                                </ul>
-                            </div>
-                            
-                            <div class="form-section">
-                                <div class="upload-area" id="uploadArea">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drag & drop secure GLB file here</p>
-                                    <span class="upload-hint">or click to browse</span>
-                                    <input type="file" id="modelFile" accept=".glb,.gltf" style="display: none;">
-                                </div>
+                        <!-- GitHub Import Tab -->
+                        <div class="tab-pane active" id="githubTab">
+                            <div class="import-guide">
+                                <h5><i class="fab fa-github"></i> GitHub Repository Import</h5>
+                                <p>Import GLB models from your GitHub repository automatically</p>
                                 
-                                <div class="file-info" id="fileInfo" style="display: none;">
-                                    <div class="file-preview">
-                                        <i class="fas fa-cube"></i>
-                                    </div>
-                                    <div class="file-details">
-                                        <h6 id="fileName">File Name</h6>
-                                        <span id="fileSize">0 MB</span>
-                                        <span id="fileStatus" class="status-valid">✓ Secure</span>
-                                    </div>
-                                    <button class="remove-file" id="removeFile">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="modelName">Model Name *</label>
-                                    <input type="text" id="modelName" class="form-input" placeholder="e.g., Divine Shiva Statue">
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="modelDescription">Description</label>
-                                    <textarea id="modelDescription" class="form-textarea" 
-                                              placeholder="Describe your model..." 
-                                              rows="3"></textarea>
-                                </div>
-                                
-                                <div class="form-row">
+                                <div class="form-section">
                                     <div class="form-group">
-                                        <label for="modelCategory">Category</label>
-                                        <select id="modelCategory" class="form-select">
-                                            <option value="Spiritual">Spiritual</option>
-                                            <option value="Temple">Temple</option>
-                                            <option value="Deity">Deity</option>
-                                            <option value="Symbol">Symbol</option>
-                                            <option value="Other">Other</option>
-                                        </select>
+                                        <label for="githubRepo">GitHub Repository</label>
+                                        <input type="text" id="githubRepo" class="form-input" 
+                                               placeholder="username/repository-name"
+                                               value="shank122004-tech/DivineAppWeb">
                                     </div>
+                                    
                                     <div class="form-group">
-                                        <label for="modelTags">Tags</label>
-                                        <input type="text" id="modelTags" class="form-input" 
-                                               placeholder="shiva, statue, divine">
+                                        <label for="modelsPath">Models Folder Path</label>
+                                        <input type="text" id="modelsPath" class="form-input" 
+                                               placeholder="models"
+                                               value="models">
+                                        <p class="form-hint">Folder containing your GLB files (e.g., "models")</p>
                                     </div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="thumbnailUrl">Thumbnail URL (optional)</label>
-                                    <input type="url" id="thumbnailUrl" class="form-input" 
-                                           placeholder="https://example.com/thumbnail.jpg">
-                                    <p class="form-hint">Leave empty for auto-generated thumbnail</p>
-                                </div>
-                                
-                                <div class="form-actions">
-                                    <button class="btn-secondary" id="clearForm">
-                                        <i class="fas fa-times"></i> Clear
-                                    </button>
-                                    <button class="btn-primary" id="addModelBtn">
-                                        <i class="fas fa-plus-circle"></i> Add to Gallery
-                                    </button>
+                                    
+                                    <div class="form-group">
+                                        <label for="jsonUrl">JSON File URL (optional)</label>
+                                        <input type="url" id="jsonUrl" class="form-input" 
+                                               placeholder="https://raw.githubusercontent.com/.../models.json">
+                                        <p class="form-hint">Leave empty to auto-scan repository</p>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="autoRefresh">Auto Refresh</label>
+                                            <select id="autoRefresh" class="form-select">
+                                                <option value="15">Every 15 minutes</option>
+                                                <option value="30">Every 30 minutes</option>
+                                                <option value="60">Every hour</option>
+                                                <option value="0">Manual only</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="defaultCategory">Default Category</label>
+                                            <select id="defaultCategory" class="form-select">
+                                                <option value="Spiritual">Spiritual</option>
+                                                <option value="Temple">Temple</option>
+                                                <option value="Deity">Deity</option>
+                                                <option value="Symbol">Symbol</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-actions">
+                                        <button class="btn-secondary" id="testConnection">
+                                            <i class="fas fa-wifi"></i> Test Connection
+                                        </button>
+                                        <button class="btn-primary" id="importModelsBtn">
+                                            <i class="fas fa-download"></i> Import Models
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="import-status" id="importStatus" style="display: none;">
+                                        <div class="status-header">
+                                            <i class="fas fa-sync-alt spinning"></i>
+                                            <span>Importing models...</span>
+                                        </div>
+                                        <div class="status-details" id="importDetails">
+                                            <!-- Status updates will appear here -->
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -527,6 +529,15 @@
                                 <div class="models-count">
                                     <span id="modelsCount">0</span> models total
                                 </div>
+                            </div>
+                            
+                            <div class="models-actions">
+                                <button class="btn-secondary" id="exportModels">
+                                    <i class="fas fa-file-export"></i> Export List
+                                </button>
+                                <button class="btn-secondary" id="clearAllModels">
+                                    <i class="fas fa-trash"></i> Clear All
+                                </button>
                             </div>
                             
                             <div class="models-list" id="adminModelsList">
@@ -561,11 +572,24 @@
                                 
                                 <div class="security-item">
                                     <div class="security-label">
-                                        <i class="fas fa-database"></i>
-                                        <span>Storage Method</span>
+                                        <i class="fas fa-download"></i>
+                                        <span>Auto-Secure Downloads</span>
                                     </div>
                                     <div class="security-value">
-                                        IndexedDB + LocalStorage
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="autoSecure" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="security-item">
+                                    <div class="security-label">
+                                        <i class="fas fa-mobile-alt"></i>
+                                        <span>App Compatibility</span>
+                                    </div>
+                                    <div class="security-value">
+                                        <span class="status-badge success">Active</span>
                                     </div>
                                 </div>
                                 
@@ -573,8 +597,8 @@
                                     <button class="btn-secondary" id="resetSecurity">
                                         <i class="fas fa-redo"></i> Reset Settings
                                     </button>
-                                    <button class="btn-primary" id="exportData">
-                                        <i class="fas fa-download"></i> Export Data
+                                    <button class="btn-primary" id="backupData">
+                                        <i class="fas fa-database"></i> Backup Data
                                     </button>
                                 </div>
                             </div>
@@ -600,8 +624,8 @@
 
     <!-- Floating Action Buttons -->
     <div class="fab-container">
-        <button class="fab primary" id="fabUpload" onclick="openAdminPanel()">
-            <i class="fas fa-plus"></i>
+        <button class="fab primary" id="fabImport" onclick="openAdminPanel()">
+            <i class="fab fa-github"></i>
         </button>
         <button class="fab secondary" id="fabScrollTop" onclick="scrollToTop()">
             <i class="fas fa-arrow-up"></i>
