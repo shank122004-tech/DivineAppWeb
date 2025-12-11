@@ -3022,3 +3022,70 @@ input:checked + .toggle-slider:before {
         break-inside: avoid;
     }
 }
+:root {
+  --primary: #0b74de;
+  --text: #111;
+  --muted: #6b7280;
+  --radius: 12px;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--text);
+  text-align: center;
+}
+
+.container {
+  padding: 24px;
+  max-width: 480px;
+  margin: auto;
+}
+
+.title {
+  margin-top: 40px;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-bottom: 30px;
+}
+
+.download-box {
+  margin-top: 20px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 14px 22px;
+  background: var(--primary);
+  color: white;
+  font-size: 1rem;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(11, 116, 222, 0.25);
+}
+
+.apk-meta {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.footer {
+  margin-top: 40px;
+  padding: 20px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* Responsive */
+@media (max-width: 420px) {
+  .title { font-size: 1.5rem; }
+  .btn { padding: 12px 18px; }
+}
+
