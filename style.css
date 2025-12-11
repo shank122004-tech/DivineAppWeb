@@ -3282,3 +3282,56 @@ input:checked + .toggle-slider:before {
         break-inside: avoid;
     }
 }
+/* Enhanced scrolling for APK modal on mobile */
+@media (max-width: 768px) {
+    .apk-modal-body {
+        padding: var(--spacing-lg);
+        gap: var(--spacing-md);
+    }
+    
+    .apk-instructions {
+        max-height: 150px; /* Smaller on mobile */
+        padding: var(--spacing-md);
+    }
+    
+    .apk-instructions h5 {
+        font-size: 0.9375rem;
+        padding-bottom: var(--spacing-xs);
+    }
+    
+    .apk-instructions ol {
+        margin-left: var(--spacing-md);
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+    
+    .apk-instructions li {
+        margin-bottom: var(--spacing-xs);
+    }
+}
+
+/* Ensure modal doesn't exceed screen height on very small devices */
+@media (max-height: 700px) {
+    .apk-modal-container {
+        max-height: 85vh;
+    }
+    
+    .apk-icon {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .apk-modal-body h4 {
+        font-size: 1.25rem;
+    }
+    
+    .apk-info {
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .apk-download-link {
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+    }
+}
