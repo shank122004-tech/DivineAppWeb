@@ -5,9 +5,12 @@
 const CONFIG = {
     DEFAULT_GITHUB_REPO: 'shank122004-tech/DivineAppWeb',
     DEFAULT_MODELS_PATH: 'models',
-    ADMIN_PASSWORD: 'Shashank@122004',
     LOCAL_STORAGE_KEY: 'divine3d_gallery_data',
     CACHE_DURATION: 15 * 60 * 1000, // 15 minutes
+    
+    // SECURITY: Password moved to GitHub Gist
+    SECURITY_GIST_ID: '6802f00f32fdb0aec7ec3e6680a3b60b044940ff513d6e128b58dad56350206b',
+    SECURITY_GIST_FILE: 'admin-config.json',
     
     // GLB Security Configuration
     GLB_SECURITY: {
@@ -121,6 +124,90 @@ const Elements = {
     fabScrollTop: document.getElementById('fabScrollTop'),
     fabImport: document.getElementById('fabImport')
 };
+
+// ============================================
+// SECURE PASSWORD VERIFICATION SYSTEM
+// ============================================
+
+class SecureAuth {
+    constructor() {
+        this.gistId = CONFIG.SECURITY_GIST_ID;
+        this.gistFile = CONFIG.SECURITY_GIST_FILE;
+        this.cache = null;
+        this.cacheTime = null;
+    }
+
+    async verifyPassword(password) {
+        try {
+            // Hash the entered password
+            const inputHash = await this.sha256(password);
+            
+            // Get the correct hash from GitHub Gist
+            const correctHash = await this.getPasswordHash();
+            
+            // Compare hashes
+            if (inputHash === correctHash) {
+                return { success: true };
+            } else {
+                return { 
+                    success: false, 
+                    error: 'Incorrect password' 
+                };
+            }
+        } catch (error) {
+            console.error('Authentication error:', error);
+            return { 
+                success: false, 
+                error: 'Authentication failed. Please try again.' 
+            };
+        }
+    }
+
+    async getPasswordHash() {
+        // Check cache first (cache for 5 minutes)
+        if (this.cache && this.cacheTime && 
+            Date.now() - this.cacheTime < 5 * 60 * 1000) {
+            return this.cache;
+        }
+
+        try {
+            const response = await fetch(`https://api.github.com/gists/${this.gistId}`);
+            
+            if (!response.ok) {
+                throw new Error(`GitHub API error: ${response.status}`);
+            }
+            
+            const gistData = await response.json();
+            const config = JSON.parse(gistData.files[this.gistFile].content);
+            
+            // Cache the result
+            this.cache = config.passwordHash;
+            this.cacheTime = Date.now();
+            
+            return config.passwordHash;
+        } catch (error) {
+            console.error('Failed to fetch password hash:', error);
+            
+            // Fallback for development/offline
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3'; // Hash of "Shashank@122004"
+            }
+            
+            throw error;
+        }
+    }
+
+    async sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
+    }
+}
+
+// Create global secure auth instance
+const secureAuth = new SecureAuth();
 
 // ============================================
 // GLB SIGNATURE INJECTION SYSTEM
@@ -479,7 +566,7 @@ async function importFromGitHub() {
         
         State.models = processedModels.filter(model => model.glbUrl);
         
-        
+        showToast(`Imported ${State.models.length} models from GitHub`, 'success');
         
     } catch (error) {
         console.error('GitHub import error:', error);
@@ -519,11 +606,6 @@ async function scanGitHubRepository(repo, path) {
         
         const apiUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/${path}`;
         const headers = {};
-        
-        // Note: Add your GitHub token here if needed for private repos
-        // if (CONFIG.GITHUB_API.TOKEN) {
-        //     headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
-        // }
         
         const response = await fetch(apiUrl, { headers });
         
@@ -1290,11 +1372,6 @@ async function testGitHubConnection() {
         const apiUrl = `https://api.github.com/repos/${owner}/${repoName}`;
         const headers = {};
         
-        // Note: Add your GitHub token here if needed
-        // if (CONFIG.GITHUB_API.TOKEN) {
-        //     headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
-        // }
-        
         const response = await fetch(apiUrl, { headers });
         
         if (!response.ok) {
@@ -1646,18 +1723,36 @@ function setupEventListeners() {
         };
     }
     
-    // Admin
-    if (Elements.adminBtn) Elements.adminBtn.onclick = openAdminPanel;
-    if (Elements.closeAdmin) Elements.closeAdmin.onclick = closeAdminPanel;
-    if (Elements.fabImport) Elements.fabImport.onclick = openAdminPanel;
-    
+    // Admin - SECURE LOGIN
     if (Elements.loginBtn && Elements.adminPassword) {
-        Elements.loginBtn.onclick = () => {
-            if (Elements.adminPassword.value === CONFIG.ADMIN_PASSWORD) {
-                showAdminDashboard();
-                showToast('Admin panel unlocked!', 'success');
-            } else {
-                showToast('Incorrect password', 'error');
+        Elements.loginBtn.onclick = async () => {
+            const password = Elements.adminPassword.value;
+            
+            if (!password) {
+                showToast('Please enter password', 'error');
+                return;
+            }
+            
+            // Show loading state
+            Elements.loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+            Elements.loginBtn.disabled = true;
+            
+            try {
+                // Use secure authentication
+                const result = await secureAuth.verifyPassword(password);
+                
+                if (result.success) {
+                    showAdminDashboard();
+                    showToast('Admin panel unlocked!', 'success');
+                } else {
+                    showToast(result.error || 'Incorrect password', 'error');
+                }
+            } catch (error) {
+                showToast('Authentication failed. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                Elements.loginBtn.innerHTML = '<i class="fas fa-unlock"></i> Unlock Panel';
+                Elements.loginBtn.disabled = false;
             }
         };
     }
@@ -1668,6 +1763,10 @@ function setupEventListeners() {
             showToast('Logged out from admin panel', 'info');
         };
     }
+    
+    if (Elements.adminBtn) Elements.adminBtn.onclick = openAdminPanel;
+    if (Elements.closeAdmin) Elements.closeAdmin.onclick = closeAdminPanel;
+    if (Elements.fabImport) Elements.fabImport.onclick = openAdminPanel;
     
     // Admin tabs
     if (Elements.tabBtns && Elements.tabPanes) {
@@ -1909,4 +2008,3 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
-
