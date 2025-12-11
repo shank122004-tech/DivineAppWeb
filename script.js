@@ -1834,31 +1834,3 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
-document.getElementById("year").textContent = new Date().getFullYear();
-
-(async function () {
-  const btn = document.getElementById("apk-download");
-  const meta = document.getElementById("apk-meta");
-  const fallback = "docs/app-debug.apk";
-  btn.href = fallback;
-
-  async function headInfo(url) {
-    try {
-      const r = await fetch(url, { method: "HEAD" });
-      if (!r.ok) return null;
-      return r.headers.get("content-length");
-    } catch {
-      return null;
-    }
-  }
-
-  const size = await headInfo(fallback);
-  if (size) {
-    const kb = Math.round((parseInt(size, 10) / 1024) * 10) / 10;
-    meta.textContent = `(APK Size: ${kb} KB)`;
-  }
-})();
-
-
-
-
