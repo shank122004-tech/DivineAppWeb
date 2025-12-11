@@ -1,4 +1,4 @@
-// script.js - Divine 3D Gallery - Complete with GLB Security & GitHub Import
+// script.js - Divine 3D Gallery - Complete with Auto-Signature Feature
 'use strict';
 
 // Configuration
@@ -38,24 +38,230 @@ const CONFIG = {
             downloads: 1250,
             secure: true,
             source: 'github'
-        },
-        {
-            id: 'sample_2',
-            name: 'Meditation Buddha',
-            description: 'Peaceful Buddha statue in meditation pose',
-            category: 'Spiritual',
-            tags: ['buddha', 'meditation', 'peace', 'statue'],
-            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
-            fileSize: '3.2 MB',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            downloads: 980,
-            secure: true,
-            source: 'github'
         }
     ]
 };
+
+// GLB Security Processor - Automatically adds signature to downloads
+class GLBSecurityProcessor {
+    constructor() {
+        this.FILENAME_SIGNATURE = "@divinemantra";
+        this.INTERNAL_SIGNATURE = "DM-9937-SECURE-CODE";
+        this.MAGIC = 0x46546C67; // "glTF"
+        this.CHUNK_JSON = 0x4E4F534A; // "JSON"
+        this.CHUNK_BIN = 0x004E4942; // "BIN"
+    }
+
+    // Main method to secure a GLB file
+    async secureGLBFile(originalUrl) {
+        try {
+            console.log('Securing GLB file:', originalUrl);
+            
+            // Download the original file
+            const response = await fetch(originalUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to download: ${response.status}`);
+            }
+            
+            const arrayBuffer = await response.arrayBuffer();
+            
+            // Add internal signature to GLB
+            const securedBuffer = await this.addInternalSignature(arrayBuffer);
+            
+            // Create blob URL for download
+            const securedBlob = new Blob([securedBuffer], { type: 'model/gltf-binary' });
+            const securedUrl = URL.createObjectURL(securedBlob);
+            
+            console.log('GLB file secured successfully');
+            return securedUrl;
+            
+        } catch (error) {
+            console.error('GLB security error:', error);
+            throw new Error(`Failed to secure file: ${error.message}`);
+        }
+    }
+
+    // Add internal signature to GLB binary
+    async addInternalSignature(arrayBuffer) {
+        try {
+            const dataView = new DataView(arrayBuffer);
+            
+            // Verify GLB magic number
+            const magic = dataView.getUint32(0, true);
+            if (magic !== this.MAGIC) {
+                throw new Error('Invalid GLB file: incorrect magic number');
+            }
+            
+            const version = dataView.getUint32(4, true);
+            const totalLength = dataView.getUint32(8, true);
+            
+            // Parse chunks
+            let offset = 12;
+            let jsonChunk = null;
+            let binChunk = null;
+            
+            // Find JSON and BIN chunks
+            while (offset < totalLength) {
+                const chunkLength = dataView.getUint32(offset, true);
+                const chunkType = dataView.getUint32(offset + 4, true);
+                
+                if (chunkType === this.CHUNK_JSON) {
+                    jsonChunk = {
+                        offset: offset + 8,
+                        length: chunkLength,
+                        data: arrayBuffer.slice(offset + 8, offset + 8 + chunkLength)
+                    };
+                } else if (chunkType === this.CHUNK_BIN) {
+                    binChunk = {
+                        offset: offset + 8,
+                        length: chunkLength,
+                        data: arrayBuffer.slice(offset + 8, offset + 8 + chunkLength)
+                    };
+                }
+                
+                offset += 8 + chunkLength;
+            }
+            
+            if (!jsonChunk) {
+                throw new Error('No JSON chunk found in GLB file');
+            }
+            
+            // Parse and modify JSON
+            const jsonText = new TextDecoder().decode(jsonChunk.data);
+            const gltf = JSON.parse(jsonText);
+            
+            // Add signature to asset metadata
+            if (!gltf.asset) {
+                gltf.asset = {};
+            }
+            gltf.asset.signature = this.INTERNAL_SIGNATURE;
+            gltf.asset.generator = "Divine Mantra Auto-Secure v1.0";
+            gltf.asset.version = "2.0";
+            
+            // Convert back to JSON
+            const newJsonText = JSON.stringify(gltf);
+            const newJsonData = new TextEncoder().encode(newJsonText);
+            
+            // Calculate padding for JSON chunk (must be multiple of 4)
+            const jsonPadding = (4 - (newJsonData.length % 4)) % 4;
+            const paddedJsonLength = newJsonData.length + jsonPadding;
+            
+            // Create new array buffer
+            const headerLength = 12; // magic + version + length
+            const chunkHeaderLength = 8; // chunk length + type
+            
+            let newTotalLength = headerLength;
+            newTotalLength += chunkHeaderLength + paddedJsonLength;
+            
+            if (binChunk) {
+                const binPadding = (4 - (binChunk.length % 4)) % 4;
+                newTotalLength += chunkHeaderLength + binChunk.length + binPadding;
+            }
+            
+            const newBuffer = new ArrayBuffer(newTotalLength);
+            const newDataView = new DataView(newBuffer);
+            
+            // Write header
+            newDataView.setUint32(0, this.MAGIC, true); // magic
+            newDataView.setUint32(4, version, true); // version
+            newDataView.setUint32(8, newTotalLength, true); // total length
+            
+            let writeOffset = 12;
+            
+            // Write JSON chunk
+            newDataView.setUint32(writeOffset, paddedJsonLength, true);
+            writeOffset += 4;
+            newDataView.setUint32(writeOffset, this.CHUNK_JSON, true);
+            writeOffset += 4;
+            
+            // Write JSON data
+            new Uint8Array(newBuffer).set(newJsonData, writeOffset);
+            writeOffset += newJsonData.length;
+            
+            // Add padding zeros
+            for (let i = 0; i < jsonPadding; i++) {
+                newDataView.setUint8(writeOffset + i, 0);
+            }
+            writeOffset += jsonPadding;
+            
+            // Write BIN chunk if exists
+            if (binChunk) {
+                const binPadding = (4 - (binChunk.length % 4)) % 4;
+                const paddedBinLength = binChunk.length + binPadding;
+                
+                newDataView.setUint32(writeOffset, paddedBinLength, true);
+                writeOffset += 4;
+                newDataView.setUint32(writeOffset, this.CHUNK_BIN, true);
+                writeOffset += 4;
+                
+                // Write BIN data
+                const binArray = new Uint8Array(binChunk.data);
+                new Uint8Array(newBuffer).set(binArray, writeOffset);
+                writeOffset += binChunk.length;
+                
+                // Add padding zeros
+                for (let i = 0; i < binPadding; i++) {
+                    newDataView.setUint8(writeOffset + i, 0);
+                }
+            }
+            
+            console.log('Internal signature added successfully');
+            return newBuffer;
+            
+        } catch (error) {
+            console.error('Error adding internal signature:', error);
+            throw error;
+        }
+    }
+
+    // Verify if GLB already has signature
+    async verifyGLBSignature(arrayBuffer) {
+        try {
+            const dataView = new DataView(arrayBuffer);
+            
+            // Check magic number
+            const magic = dataView.getUint32(0, true);
+            if (magic !== this.MAGIC) {
+                return false;
+            }
+            
+            // Find JSON chunk
+            let offset = 12;
+            const totalLength = dataView.getUint32(8, true);
+            
+            while (offset < totalLength) {
+                const chunkLength = dataView.getUint32(offset, true);
+                const chunkType = dataView.getUint32(offset + 4, true);
+                
+                if (chunkType === this.CHUNK_JSON) {
+                    const jsonStart = offset + 8;
+                    const jsonEnd = jsonStart + chunkLength;
+                    
+                    // Extract JSON data
+                    const jsonSlice = arrayBuffer.slice(jsonStart, jsonEnd);
+                    const jsonText = new TextDecoder().decode(jsonSlice);
+                    
+                    try {
+                        const gltf = JSON.parse(jsonText);
+                        return gltf.asset && gltf.asset.signature === this.INTERNAL_SIGNATURE;
+                    } catch (parseError) {
+                        return false;
+                    }
+                }
+                
+                offset += 8 + chunkLength;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Signature verification error:', error);
+            return false;
+        }
+    }
+}
+
+// Initialize GLB processor
+const glbProcessor = new GLBSecurityProcessor();
 
 // State Management
 const State = {
@@ -200,7 +406,7 @@ async function init() {
         State.isInitialized = true;
         
         // Show welcome message
-        showToast('Welcome to Divine 3D Gallery! All models are auto-secured.', 'success');
+        showToast('Welcome to Divine 3D Gallery! All downloads auto-secured.', 'success');
         
     } catch (error) {
         console.error('Initialization error:', error);
@@ -288,7 +494,7 @@ async function importFromGitHub() {
                     createdAt: model.createdAt || new Date().toISOString(),
                     updatedAt: model.updatedAt || new Date().toISOString(),
                     downloads: model.downloadCount || model.downloads || 0,
-                    secure: checkGLBSecurity(model.glbUrl),
+                    secure: await checkGLBSecurity(model.glbUrl),
                     source: 'github',
                     rating: model.rating || 0
                 };
@@ -305,6 +511,32 @@ async function importFromGitHub() {
     } catch (error) {
         console.error('GitHub import error:', error);
         throw error;
+    }
+}
+
+async function checkGLBSecurity(url) {
+    try {
+        // First check filename
+        const hasFilenameSignature = url.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE);
+        
+        if (!hasFilenameSignature) {
+            return false;
+        }
+        
+        // Then check internal signature
+        const response = await fetch(url);
+        if (!response.ok) {
+            return false;
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const hasInternalSignature = await glbProcessor.verifyGLBSignature(arrayBuffer);
+        
+        return hasInternalSignature;
+        
+    } catch (error) {
+        console.warn('GLB security check error:', error);
+        return false;
     }
 }
 
@@ -376,7 +608,7 @@ async function scanGitHubRepository(repo, path) {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 downloads: 0,
-                secure: checkGLBSecurity(rawUrl),
+                secure: file.name.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE),
                 source: 'github'
             };
         });
@@ -387,10 +619,6 @@ async function scanGitHubRepository(repo, path) {
         console.error('GitHub scan error:', error);
         throw error;
     }
-}
-
-function checkGLBSecurity(url) {
-    return url.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE);
 }
 
 async function getFileSize(url) {
@@ -547,46 +775,68 @@ function saveGitHubConfig() {
 }
 
 // ============================================
-// GLB SECURITY PROCESSOR
+// GLB DOWNLOAD WITH AUTO-SIGNATURE
 // ============================================
 
-async function secureGLBFile(originalUrl) {
-    if (!State.autoSecureDownloads) {
-        return originalUrl;
-    }
-    
+async function downloadModel(model) {
     try {
-        // Check if already secured
-        if (checkGLBSecurity(originalUrl)) {
-            return originalUrl;
+        showToast(`Securing ${model.name} for download...`, 'info');
+        
+        let downloadUrl = model.glbUrl;
+        let securedFilename = model.name.replace(/\s+/g, '_');
+        
+        if (State.autoSecureDownloads) {
+            try {
+                // Add internal signature to GLB
+                const securedUrl = await glbProcessor.secureGLBFile(model.glbUrl);
+                downloadUrl = securedUrl;
+                
+                // Add filename signature
+                if (!securedFilename.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE)) {
+                    securedFilename = `${securedFilename}${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}`;
+                }
+                
+                showToast('GLB secured with Divine Mantra signature', 'success');
+                
+            } catch (securityError) {
+                console.error('Security processing error:', securityError);
+                showToast('Using original file (security processing failed)', 'warning');
+            }
         }
         
-        showToast('Securing GLB file for mobile app...', 'info');
+        // Ensure .glb extension
+        if (!securedFilename.toLowerCase().endsWith('.glb')) {
+            securedFilename += '.glb';
+        }
         
-        // In a real implementation, you would:
-        // 1. Download the GLB file
-        // 2. Add internal signature to metadata
-        // 3. Rename file with @divinemantra signature
-        // 4. Return the secured file URL
+        // Create download link
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = securedFilename;
+        a.style.display = 'none';
+        a.rel = 'noopener noreferrer';
         
-        // For now, we'll simulate the process
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        document.body.appendChild(a);
+        a.click();
         
-        // Create secured filename
-        const url = new URL(originalUrl);
-        const filename = url.pathname.split('/').pop();
-        const securedFilename = filename.replace('.glb', `${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}.glb`);
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+            if (downloadUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(downloadUrl);
+            }
+        }, 100);
         
-        // Return modified URL (in production, this would be a new file)
-        const securedUrl = originalUrl.replace(filename, securedFilename);
+        // Update download count
+        model.downloads = (model.downloads || 0) + 1;
+        saveToLocalStorage();
+        updateAdminModelList();
         
-        showToast('GLB file secured for mobile app upload', 'success');
-        return securedUrl;
+        showToast(`${model.name} downloaded successfully!`, 'success');
         
     } catch (error) {
-        console.error('GLB security error:', error);
-        showToast('Failed to secure file, downloading original', 'warning');
-        return originalUrl;
+        console.error('Download error:', error);
+        showToast(`Failed to download: ${error.message}`, 'error');
     }
 }
 
@@ -708,11 +958,16 @@ function createModelCard(model, index) {
         thumbnailHTML = '<div class="thumbnail-placeholder">🎨</div>';
     }
     
+    // Security badge
+    const securityBadge = model.secure ? 
+        '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Pre-Secured</span>' : 
+        '<span class="model-badge" style="left: auto; right: 1rem; background: var(--info);">🔄 Auto-Secure</span>';
+    
     card.innerHTML = `
         <div class="model-thumbnail">
             ${thumbnailHTML}
             <span class="model-badge">${model.category}</span>
-            ${model.secure ? '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Secure</span>' : ''}
+            ${securityBadge}
         </div>
         <div class="model-content">
             <div class="model-header">
@@ -730,7 +985,7 @@ function createModelCard(model, index) {
                     <i class="fas fa-eye"></i> Preview 3D
                 </button>
                 <button class="action-btn download-btn">
-                    <i class="fas fa-download"></i> Download
+                    <i class="fas fa-download"></i> ${State.autoSecureDownloads ? 'Download Secured' : 'Download'}
                 </button>
             </div>
         </div>
@@ -873,56 +1128,6 @@ function closePreview() {
     State.currentPreviewModel = null;
 }
 
-// ============================================
-// MODEL DOWNLOAD FUNCTIONS
-// ============================================
-
-async function downloadModel(model) {
-    try {
-        showToast(`Preparing ${model.name} for download...`, 'info');
-        
-        // Secure the file if enabled
-        let downloadUrl = model.glbUrl;
-        if (State.autoSecureDownloads) {
-            downloadUrl = await secureGLBFile(model.glbUrl);
-        }
-        
-        // Create download link
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        
-        // Create secure filename
-        const originalName = model.name.replace(/\s+/g, '_');
-        const securedName = State.autoSecureDownloads 
-            ? `${originalName}${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}.glb`
-            : `${originalName}.glb`;
-        
-        a.download = securedName;
-        a.style.display = 'none';
-        a.rel = 'noopener noreferrer';
-        
-        document.body.appendChild(a);
-        a.click();
-        
-        // Cleanup
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(downloadUrl);
-        }, 100);
-        
-        // Update download count
-        model.downloads = (model.downloads || 0) + 1;
-        saveToLocalStorage();
-        updateAdminModelList();
-        
-        showToast(`${model.name} download started!`, 'success');
-        
-    } catch (error) {
-        console.error('Download error:', error);
-        showToast(`Failed to download: ${error.message}`, 'error');
-    }
-}
-
 async function copyModelUrl() {
     if (!State.currentPreviewModel) return;
     
@@ -1015,7 +1220,7 @@ function updateAdminModelList() {
                 <h6>${model.name}</h6>
                 <span>${model.category} • ${model.downloads} downloads</span>
                 <span style="color: ${model.secure ? 'var(--success)' : 'var(--warning)'}; font-size: 0.7rem;">
-                    ${model.secure ? '🔒 Secured' : '⚠️ Unsecured'}
+                    ${model.secure ? '🔒 Pre-Secured' : '⚠️ Auto-Secure on Download'}
                 </span>
             </div>
             <div class="model-actions-small">
@@ -1123,6 +1328,7 @@ async function importModelsFromGitHub() {
             <p><strong>Import completed successfully!</strong></p>
             <p>Imported ${importedCount} new models</p>
             <p>Total models: ${State.models.length}</p>
+            <p>Security: All downloads will be auto-secured with Divine Mantra signature</p>
         `;
         
         updateAdminStatus('Import completed', 'success');
@@ -1438,6 +1644,7 @@ function setupEventListeners() {
         State.autoSecureDownloads = e.target.checked;
         saveToLocalStorage();
         showToast(`Auto-secure downloads ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+        renderModels(); // Update button text
     });
     
     Elements.resetSecurity.onclick = () => {
@@ -1446,6 +1653,7 @@ function setupEventListeners() {
             Elements.autoSecure.checked = true;
             saveToLocalStorage();
             showToast('Security settings reset to defaults', 'success');
+            renderModels();
         }
     };
     
