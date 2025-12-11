@@ -1,4 +1,4 @@
-// script.js - Divine 3D Gallery - Complete with Auto-Signature Injection
+// script.js - Divine 3D Gallery + APK Download - Complete with All Features
 'use strict';
 
 // Configuration
@@ -48,6 +48,12 @@ const State = {
 const Elements = {
     loadingScreen: document.getElementById('loadingScreen'),
     themeToggle: document.getElementById('themeToggle'),
+    apkDownloadBtn: document.getElementById('apkDownloadBtn'),
+    apkModal: document.getElementById('apkModal'),
+    closeApkModal: document.getElementById('closeApkModal'),
+    openApkModalBtn: document.getElementById('openApkModalBtn'),
+    apkDownloadLink: document.getElementById('apkDownloadLink'),
+    apkSize: document.getElementById('apkSize'),
     adminBtn: document.getElementById('adminBtn'),
     adminOverlay: document.getElementById('adminOverlay'),
     refreshBtn: document.getElementById('refreshBtn'),
@@ -301,6 +307,62 @@ class GLBSignatureInjector {
 const signatureInjector = new GLBSignatureInjector();
 
 // ============================================
+// APK DOWNLOAD FUNCTIONS
+// ============================================
+
+async function getAPKFileSize() {
+    try {
+        const apkUrl = 'docs/app-debug.apk';
+        const response = await fetch(apkUrl, { method: 'HEAD' });
+        
+        if (response.ok) {
+            const size = response.headers.get('content-length');
+            if (size) {
+                const bytes = parseInt(size, 10);
+                const kb = Math.round((bytes / 1024) * 10) / 10;
+                const mb = Math.round((bytes / (1024 * 1024)) * 100) / 100;
+                
+                if (Elements.apkSize) {
+                    Elements.apkSize.textContent = mb > 1 ? 
+                        `${mb} MB` : `${kb} KB`;
+                }
+                
+                return {
+                    bytes: bytes,
+                    kb: kb,
+                    mb: mb,
+                    formatted: mb > 1 ? `${mb} MB` : `${kb} KB`
+                };
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to get APK file size:', error);
+    }
+    
+    if (Elements.apkSize) {
+        Elements.apkSize.textContent = 'Size: Unknown';
+    }
+    return null;
+}
+
+function openApkModal() {
+    if (Elements.apkModal) {
+        Elements.apkModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        // Update APK size if needed
+        getAPKFileSize();
+    }
+}
+
+function closeApkModal() {
+    if (Elements.apkModal) {
+        Elements.apkModal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+// ============================================
 // INITIALIZATION
 // ============================================
 
@@ -313,6 +375,9 @@ async function init() {
         
         // Load saved data
         loadSavedData();
+        
+        // Get APK file size
+        getAPKFileSize();
         
         // Load initial data
         await loadModels();
@@ -452,12 +517,13 @@ async function scanGitHubRepository(repo, path) {
     try {
         const [owner, repoName] = repo.split('/');
         
-        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}/contents/${path}`;
+        const apiUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/${path}`;
         const headers = {};
         
-        if (CONFIG.GITHUB_API.TOKEN) {
-            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
-        }
+        // Note: Add your GitHub token here if needed for private repos
+        // if (CONFIG.GITHUB_API.TOKEN) {
+        //     headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
+        // }
         
         const response = await fetch(apiUrl, { headers });
         
@@ -473,7 +539,7 @@ async function scanGitHubRepository(repo, path) {
         );
         
         const models = glbFiles.map(file => {
-            const rawUrl = `${CONFIG.GITHUB_API.RAW_CONTENT_URL}/${repo}/main/${path}/${file.name}`;
+            const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${path}/${file.name}`;
             
             return {
                 id: `github_${file.sha}`,
@@ -482,7 +548,7 @@ async function scanGitHubRepository(repo, path) {
                 category: State.githubConfig.defaultCategory || 'Spiritual',
                 tags: [],
                 glbUrl: rawUrl,
-                thumbnailUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
+                thumbnailUrl: getDefaultThumbnail(State.githubConfig.defaultCategory || 'Spiritual'),
                 fileSize: formatFileSize(file.size),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -578,7 +644,7 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['krishna', 'divine', 'statue', 'hindu'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
+            thumbnailUrl: getDefaultThumbnail('Spiritual'),
             fileSize: '4.5 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -593,7 +659,7 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['buddha', 'meditation', 'peace', 'statue'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
+            thumbnailUrl: getDefaultThumbnail('Spiritual'),
             fileSize: '3.2 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -1221,12 +1287,13 @@ async function testGitHubConnection() {
             throw new Error('Invalid repository format. Use: username/repository-name');
         }
         
-        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}`;
+        const apiUrl = `https://api.github.com/repos/${owner}/${repoName}`;
         const headers = {};
         
-        if (CONFIG.GITHUB_API.TOKEN) {
-            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
-        }
+        // Note: Add your GitHub token here if needed
+        // if (CONFIG.GITHUB_API.TOKEN) {
+        //     headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
+        // }
         
         const response = await fetch(apiUrl, { headers });
         
@@ -1509,6 +1576,18 @@ function setupEventListeners() {
         });
     }
     
+    // APK Download
+    if (Elements.apkDownloadBtn) Elements.apkDownloadBtn.onclick = openApkModal;
+    if (Elements.openApkModalBtn) Elements.openApkModalBtn.onclick = openApkModal;
+    if (Elements.closeApkModal) Elements.closeApkModal.onclick = closeApkModal;
+    if (Elements.apkModal) {
+        Elements.apkModal.onclick = (e) => {
+            if (e.target === Elements.apkModal) {
+                closeApkModal();
+            }
+        };
+    }
+    
     // Search
     if (Elements.searchBtn && Elements.searchInput) {
         Elements.searchBtn.onclick = () => {
@@ -1708,9 +1787,6 @@ function setupEventListeners() {
         };
     }
     
-    // Scroll to top
-    if (Elements.fabScrollTop) Elements.fabScrollTop.onclick = scrollToTop;
-    
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -1719,6 +1795,9 @@ function setupEventListeners() {
             }
             if (Elements.adminOverlay && Elements.adminOverlay.classList.contains('active')) {
                 closeAdminPanel();
+            }
+            if (Elements.apkModal && Elements.apkModal.classList.contains('active')) {
+                closeApkModal();
             }
         }
         
@@ -1730,6 +1809,11 @@ function setupEventListeners() {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
             openAdminPanel();
+        }
+        
+        if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+            e.preventDefault();
+            openApkModal();
         }
     });
     
@@ -1795,17 +1879,6 @@ async function shareModel() {
 }
 
 // ============================================
-// GLOBAL CONFIGURATION
-// ============================================
-
-// GitHub API Configuration
-CONFIG.GITHUB_API = {
-    BASE_URL: 'https://api.github.com',
-    RAW_CONTENT_URL: 'https://raw.githubusercontent.com',
-    TOKEN: null // Add your GitHub token here for private repos
-};
-
-// ============================================
 // INITIALIZE
 // ============================================
 
@@ -1820,6 +1893,8 @@ window.openPreview = openPreview;
 window.downloadModel = downloadModel;
 window.openAdminPanel = openAdminPanel;
 window.closeAdminPanel = closeAdminPanel;
+window.openApkModal = openApkModal;
+window.closeApkModal = closeApkModal;
 window.scrollToSection = scrollToSection;
 window.scrollToTop = scrollToTop;
 window.clearFilters = clearFilters;
