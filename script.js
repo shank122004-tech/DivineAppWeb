@@ -1,4 +1,4 @@
-// script.js - Divine 3D Gallery - Complete with Auto-Signature Feature
+// script.js - Divine 3D Gallery - Complete with Auto-Signature Injection
 'use strict';
 
 // Configuration
@@ -12,256 +12,12 @@ const CONFIG = {
     // GLB Security Configuration
     GLB_SECURITY: {
         FILENAME_SIGNATURE: "@divinemantra",
-        INTERNAL_SIGNATURE: "DM-9937-SECURE-CODE"
-    },
-    
-    // GitHub API Configuration
-    GITHUB_API: {
-        BASE_URL: 'https://api.github.com',
-        RAW_CONTENT_URL: 'https://raw.githubusercontent.com',
-        TOKEN: null // Add your GitHub token here for private repos
-    },
-    
-    // Sample models for fallback
-    SAMPLE_MODELS: [
-        {
-            id: 'sample_1',
-            name: 'Divine Krishna Statue',
-            description: 'Beautiful 3D model of Lord Krishna playing flute',
-            category: 'Spiritual',
-            tags: ['krishna', 'divine', 'statue', 'hindu'],
-            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
-            fileSize: '4.5 MB',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            downloads: 1250,
-            secure: true,
-            source: 'github'
-        }
-    ]
+        INTERNAL_SIGNATURE: "DM-9937-SECURE-CODE",
+        GLB_MAGIC: 0x46546C67, // "glTF"
+        CHUNK_TYPE_JSON: 0x4E4F534A, // "JSON"
+        CHUNK_TYPE_BIN: 0x004E4942  // "BIN"
+    }
 };
-
-// GLB Security Processor - Automatically adds signature to downloads
-class GLBSecurityProcessor {
-    constructor() {
-        this.FILENAME_SIGNATURE = "@divinemantra";
-        this.INTERNAL_SIGNATURE = "DM-9937-SECURE-CODE";
-        this.MAGIC = 0x46546C67; // "glTF"
-        this.CHUNK_JSON = 0x4E4F534A; // "JSON"
-        this.CHUNK_BIN = 0x004E4942; // "BIN"
-    }
-
-    // Main method to secure a GLB file
-    async secureGLBFile(originalUrl) {
-        try {
-            console.log('Securing GLB file:', originalUrl);
-            
-            // Download the original file
-            const response = await fetch(originalUrl);
-            if (!response.ok) {
-                throw new Error(`Failed to download: ${response.status}`);
-            }
-            
-            const arrayBuffer = await response.arrayBuffer();
-            
-            // Add internal signature to GLB
-            const securedBuffer = await this.addInternalSignature(arrayBuffer);
-            
-            // Create blob URL for download
-            const securedBlob = new Blob([securedBuffer], { type: 'model/gltf-binary' });
-            const securedUrl = URL.createObjectURL(securedBlob);
-            
-            console.log('GLB file secured successfully');
-            return securedUrl;
-            
-        } catch (error) {
-            console.error('GLB security error:', error);
-            throw new Error(`Failed to secure file: ${error.message}`);
-        }
-    }
-
-    // Add internal signature to GLB binary
-    async addInternalSignature(arrayBuffer) {
-        try {
-            const dataView = new DataView(arrayBuffer);
-            
-            // Verify GLB magic number
-            const magic = dataView.getUint32(0, true);
-            if (magic !== this.MAGIC) {
-                throw new Error('Invalid GLB file: incorrect magic number');
-            }
-            
-            const version = dataView.getUint32(4, true);
-            const totalLength = dataView.getUint32(8, true);
-            
-            // Parse chunks
-            let offset = 12;
-            let jsonChunk = null;
-            let binChunk = null;
-            
-            // Find JSON and BIN chunks
-            while (offset < totalLength) {
-                const chunkLength = dataView.getUint32(offset, true);
-                const chunkType = dataView.getUint32(offset + 4, true);
-                
-                if (chunkType === this.CHUNK_JSON) {
-                    jsonChunk = {
-                        offset: offset + 8,
-                        length: chunkLength,
-                        data: arrayBuffer.slice(offset + 8, offset + 8 + chunkLength)
-                    };
-                } else if (chunkType === this.CHUNK_BIN) {
-                    binChunk = {
-                        offset: offset + 8,
-                        length: chunkLength,
-                        data: arrayBuffer.slice(offset + 8, offset + 8 + chunkLength)
-                    };
-                }
-                
-                offset += 8 + chunkLength;
-            }
-            
-            if (!jsonChunk) {
-                throw new Error('No JSON chunk found in GLB file');
-            }
-            
-            // Parse and modify JSON
-            const jsonText = new TextDecoder().decode(jsonChunk.data);
-            const gltf = JSON.parse(jsonText);
-            
-            // Add signature to asset metadata
-            if (!gltf.asset) {
-                gltf.asset = {};
-            }
-            gltf.asset.signature = this.INTERNAL_SIGNATURE;
-            gltf.asset.generator = "Divine Mantra Auto-Secure v1.0";
-            gltf.asset.version = "2.0";
-            
-            // Convert back to JSON
-            const newJsonText = JSON.stringify(gltf);
-            const newJsonData = new TextEncoder().encode(newJsonText);
-            
-            // Calculate padding for JSON chunk (must be multiple of 4)
-            const jsonPadding = (4 - (newJsonData.length % 4)) % 4;
-            const paddedJsonLength = newJsonData.length + jsonPadding;
-            
-            // Create new array buffer
-            const headerLength = 12; // magic + version + length
-            const chunkHeaderLength = 8; // chunk length + type
-            
-            let newTotalLength = headerLength;
-            newTotalLength += chunkHeaderLength + paddedJsonLength;
-            
-            if (binChunk) {
-                const binPadding = (4 - (binChunk.length % 4)) % 4;
-                newTotalLength += chunkHeaderLength + binChunk.length + binPadding;
-            }
-            
-            const newBuffer = new ArrayBuffer(newTotalLength);
-            const newDataView = new DataView(newBuffer);
-            
-            // Write header
-            newDataView.setUint32(0, this.MAGIC, true); // magic
-            newDataView.setUint32(4, version, true); // version
-            newDataView.setUint32(8, newTotalLength, true); // total length
-            
-            let writeOffset = 12;
-            
-            // Write JSON chunk
-            newDataView.setUint32(writeOffset, paddedJsonLength, true);
-            writeOffset += 4;
-            newDataView.setUint32(writeOffset, this.CHUNK_JSON, true);
-            writeOffset += 4;
-            
-            // Write JSON data
-            new Uint8Array(newBuffer).set(newJsonData, writeOffset);
-            writeOffset += newJsonData.length;
-            
-            // Add padding zeros
-            for (let i = 0; i < jsonPadding; i++) {
-                newDataView.setUint8(writeOffset + i, 0);
-            }
-            writeOffset += jsonPadding;
-            
-            // Write BIN chunk if exists
-            if (binChunk) {
-                const binPadding = (4 - (binChunk.length % 4)) % 4;
-                const paddedBinLength = binChunk.length + binPadding;
-                
-                newDataView.setUint32(writeOffset, paddedBinLength, true);
-                writeOffset += 4;
-                newDataView.setUint32(writeOffset, this.CHUNK_BIN, true);
-                writeOffset += 4;
-                
-                // Write BIN data
-                const binArray = new Uint8Array(binChunk.data);
-                new Uint8Array(newBuffer).set(binArray, writeOffset);
-                writeOffset += binChunk.length;
-                
-                // Add padding zeros
-                for (let i = 0; i < binPadding; i++) {
-                    newDataView.setUint8(writeOffset + i, 0);
-                }
-            }
-            
-            console.log('Internal signature added successfully');
-            return newBuffer;
-            
-        } catch (error) {
-            console.error('Error adding internal signature:', error);
-            throw error;
-        }
-    }
-
-    // Verify if GLB already has signature
-    async verifyGLBSignature(arrayBuffer) {
-        try {
-            const dataView = new DataView(arrayBuffer);
-            
-            // Check magic number
-            const magic = dataView.getUint32(0, true);
-            if (magic !== this.MAGIC) {
-                return false;
-            }
-            
-            // Find JSON chunk
-            let offset = 12;
-            const totalLength = dataView.getUint32(8, true);
-            
-            while (offset < totalLength) {
-                const chunkLength = dataView.getUint32(offset, true);
-                const chunkType = dataView.getUint32(offset + 4, true);
-                
-                if (chunkType === this.CHUNK_JSON) {
-                    const jsonStart = offset + 8;
-                    const jsonEnd = jsonStart + chunkLength;
-                    
-                    // Extract JSON data
-                    const jsonSlice = arrayBuffer.slice(jsonStart, jsonEnd);
-                    const jsonText = new TextDecoder().decode(jsonSlice);
-                    
-                    try {
-                        const gltf = JSON.parse(jsonText);
-                        return gltf.asset && gltf.asset.signature === this.INTERNAL_SIGNATURE;
-                    } catch (parseError) {
-                        return false;
-                    }
-                }
-                
-                offset += 8 + chunkLength;
-            }
-            
-            return false;
-        } catch (error) {
-            console.error('Signature verification error:', error);
-            return false;
-        }
-    }
-}
-
-// Initialize GLB processor
-const glbProcessor = new GLBSecurityProcessor();
 
 // State Management
 const State = {
@@ -284,15 +40,13 @@ const State = {
         jsonUrl: '',
         autoRefresh: '15'
     },
-    autoSecureDownloads: true
+    autoSecureDownloads: true,
+    autoInjectSignature: true
 };
 
 // DOM Elements
 const Elements = {
-    // Loading
     loadingScreen: document.getElementById('loadingScreen'),
-    
-    // Header
     themeToggle: document.getElementById('themeToggle'),
     adminBtn: document.getElementById('adminBtn'),
     adminOverlay: document.getElementById('adminOverlay'),
@@ -302,12 +56,8 @@ const Elements = {
     navToggle: document.getElementById('navToggle'),
     navLinks: document.getElementById('navLinks'),
     mainHeader: document.querySelector('.main-header'),
-
-    // Hero
     totalModels: document.getElementById('totalModels'),
     heroPreview: document.getElementById('hero-preview'),
-
-    // Gallery
     galleryContainer: document.getElementById('galleryContainer'),
     gallerySearch: document.getElementById('gallerySearch'),
     categoryFilter: document.getElementById('categoryFilter'),
@@ -316,11 +66,7 @@ const Elements = {
     loadingIndicator: document.getElementById('loadingIndicator'),
     noResults: document.getElementById('noResults'),
     viewBtns: document.querySelectorAll('.view-btn'),
-
-    // Categories
     categoriesContainer: document.getElementById('categoriesContainer'),
-
-    // Preview Modal
     previewModal: document.getElementById('previewModal'),
     closePreview: document.getElementById('closePreview'),
     previewViewer: document.getElementById('previewViewer'),
@@ -339,8 +85,6 @@ const Elements = {
     fullscreenToggle: document.getElementById('fullscreenToggle'),
     arToggle: document.getElementById('arToggle'),
     resetView: document.getElementById('resetView'),
-
-    // Admin Panel
     closeAdmin: document.getElementById('closeAdmin'),
     adminLogin: document.getElementById('adminLogin'),
     adminDashboard: document.getElementById('adminDashboard'),
@@ -350,8 +94,6 @@ const Elements = {
     adminStatus: document.getElementById('adminStatus'),
     tabBtns: document.querySelectorAll('.tab-btn'),
     tabPanes: document.querySelectorAll('.tab-pane'),
-
-    // GitHub Import
     githubRepo: document.getElementById('githubRepo'),
     modelsPath: document.getElementById('modelsPath'),
     jsonUrl: document.getElementById('jsonUrl'),
@@ -361,27 +103,207 @@ const Elements = {
     importModelsBtn: document.getElementById('importModelsBtn'),
     importStatus: document.getElementById('importStatus'),
     importDetails: document.getElementById('importDetails'),
-
-    // Model Management
     adminModelsList: document.getElementById('adminModelsList'),
     modelsCount: document.getElementById('modelsCount'),
     exportModels: document.getElementById('exportModels'),
     clearAllModels: document.getElementById('clearAllModels'),
-
-    // Security
     autoSecure: document.getElementById('autoSecure'),
+    autoSignature: document.getElementById('autoSignature'),
     resetSecurity: document.getElementById('resetSecurity'),
     backupData: document.getElementById('backupData'),
-
-    // Toast
     toastContainer: document.getElementById('toastContainer'),
-
-    // FAB
     fabScrollTop: document.getElementById('fabScrollTop'),
     fabImport: document.getElementById('fabImport')
 };
 
-// Initialize Application
+// ============================================
+// GLB SIGNATURE INJECTION SYSTEM
+// ============================================
+
+class GLBSignatureInjector {
+    constructor() {
+        this.magic = CONFIG.GLB_SECURITY.GLB_MAGIC;
+        this.version = 2;
+        this.signature = CONFIG.GLB_SECURITY.INTERNAL_SIGNATURE;
+    }
+
+    async injectSignature(glbData) {
+        try {
+            console.log('Injecting signature into GLB file...');
+            
+            // Convert ArrayBuffer to DataView for easier manipulation
+            const dataView = new DataView(glbData);
+            
+            // Verify GLB magic number
+            const magic = dataView.getUint32(0, true);
+            if (magic !== this.magic) {
+                throw new Error('Invalid GLB file: Magic number mismatch');
+            }
+            
+            // Get GLB length
+            const length = dataView.getUint32(8, true);
+            
+            // Parse chunks
+            let offset = 12;
+            let jsonChunk = null;
+            let binChunk = null;
+            
+            for (let i = 0; i < 2; i++) {
+                if (offset >= length) break;
+                
+                const chunkLength = dataView.getUint32(offset, true);
+                const chunkType = dataView.getUint32(offset + 4, true);
+                
+                if (chunkType === CONFIG.GLB_SECURITY.CHUNK_TYPE_JSON) {
+                    // Found JSON chunk
+                    const chunkData = new Uint8Array(glbData, offset + 8, chunkLength);
+                    const jsonText = new TextDecoder().decode(chunkData);
+                    jsonChunk = {
+                        offset: offset,
+                        length: chunkLength,
+                        data: chunkData,
+                        json: JSON.parse(jsonText)
+                    };
+                } else if (chunkType === CONFIG.GLB_SECURITY.CHUNK_TYPE_BIN) {
+                    // Found BIN chunk
+                    binChunk = {
+                        offset: offset,
+                        length: chunkLength,
+                        data: new Uint8Array(glbData, offset + 8, chunkLength)
+                    };
+                }
+                
+                offset += 8 + chunkLength;
+            }
+            
+            if (!jsonChunk) {
+                throw new Error('No JSON chunk found in GLB file');
+            }
+            
+            // Inject signature into JSON metadata
+            if (!jsonChunk.json.asset) {
+                jsonChunk.json.asset = {};
+            }
+            jsonChunk.json.asset.signature = this.signature;
+            jsonChunk.json.asset.generator = "Divine Mantra Processor v1.0";
+            jsonChunk.json.extras = jsonChunk.json.extras || {};
+            jsonChunk.json.extras.secured = true;
+            jsonChunk.json.extras.securedAt = new Date().toISOString();
+            jsonChunk.json.extras.securedBy = "Divine 3D Gallery";
+            
+            // Convert JSON back to bytes
+            const newJsonStr = JSON.stringify(jsonChunk.json);
+            const newJsonBytes = new TextEncoder().encode(newJsonStr);
+            
+            // Calculate padding for 4-byte alignment
+            const jsonPadding = (4 - (newJsonBytes.length % 4)) % 4;
+            const newJsonLength = newJsonBytes.length + jsonPadding;
+            
+            // Calculate new total length
+            let newTotalLength = 12; // Header
+            newTotalLength += 8 + newJsonLength; // JSON chunk
+            if (binChunk) {
+                const binPadding = (4 - (binChunk.data.length % 4)) % 4;
+                newTotalLength += 8 + binChunk.data.length + binPadding; // BIN chunk
+            }
+            
+            // Create new ArrayBuffer
+            const newBuffer = new ArrayBuffer(newTotalLength);
+            const newView = new DataView(newBuffer);
+            const newBytes = new Uint8Array(newBuffer);
+            
+            // Write header
+            newView.setUint32(0, this.magic, true); // Magic
+            newView.setUint32(4, this.version, true); // Version
+            newView.setUint32(8, newTotalLength, true); // Total length
+            
+            // Write JSON chunk header
+            let writeOffset = 12;
+            newView.setUint32(writeOffset, newJsonLength, true);
+            newView.setUint32(writeOffset + 4, CONFIG.GLB_SECURITY.CHUNK_TYPE_JSON, true);
+            
+            // Write JSON chunk data
+            writeOffset += 8;
+            newBytes.set(newJsonBytes, writeOffset);
+            writeOffset += newJsonBytes.length;
+            
+            // Add JSON padding
+            for (let i = 0; i < jsonPadding; i++) {
+                newBytes[writeOffset++] = 0x20; // Space character
+            }
+            
+            // Write BIN chunk if exists
+            if (binChunk) {
+                const binPadding = (4 - (binChunk.data.length % 4)) % 4;
+                const binLength = binChunk.data.length + binPadding;
+                
+                newView.setUint32(writeOffset, binLength, true);
+                newView.setUint32(writeOffset + 4, CONFIG.GLB_SECURITY.CHUNK_TYPE_BIN, true);
+                
+                writeOffset += 8;
+                newBytes.set(binChunk.data, writeOffset);
+                writeOffset += binChunk.data.length;
+                
+                // Add BIN padding
+                for (let i = 0; i < binPadding; i++) {
+                    newBytes[writeOffset++] = 0x00;
+                }
+            }
+            
+            console.log('Signature injected successfully');
+            return newBuffer;
+            
+        } catch (error) {
+            console.error('Signature injection error:', error);
+            throw new Error(`Failed to inject signature: ${error.message}`);
+        }
+    }
+
+    checkHasSignature(glbData) {
+        try {
+            const dataView = new DataView(glbData);
+            const magic = dataView.getUint32(0, true);
+            if (magic !== this.magic) return false;
+            
+            const length = dataView.getUint32(8, true);
+            let offset = 12;
+            
+            for (let i = 0; i < 2; i++) {
+                if (offset >= length) break;
+                
+                const chunkLength = dataView.getUint32(offset, true);
+                const chunkType = dataView.getUint32(offset + 4, true);
+                
+                if (chunkType === CONFIG.GLB_SECURITY.CHUNK_TYPE_JSON) {
+                    const jsonChunk = new Uint8Array(glbData, offset + 8, chunkLength);
+                    const jsonText = new TextDecoder().decode(jsonChunk);
+                    
+                    try {
+                        const gltf = JSON.parse(jsonText);
+                        return gltf.asset && gltf.asset.signature === this.signature;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                
+                offset += 8 + chunkLength;
+            }
+            
+            return false;
+        } catch (error) {
+            console.warn('Signature check error:', error);
+            return false;
+        }
+    }
+}
+
+// Create global signature injector
+const signatureInjector = new GLBSignatureInjector();
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
 async function init() {
     try {
         showLoading(true);
@@ -405,14 +327,11 @@ async function init() {
         
         State.isInitialized = true;
         
-        // Show welcome message
         showToast('Welcome to Divine 3D Gallery! All downloads auto-secured.', 'success');
         
     } catch (error) {
         console.error('Initialization error:', error);
         showToast('Failed to initialize gallery', 'error');
-        
-        // Load sample models as fallback
         loadSampleModels();
     } finally {
         showLoading(false);
@@ -431,27 +350,20 @@ async function loadModels() {
         // Try to load from GitHub
         await importFromGitHub();
         
-        // If no models loaded, try sample models
         if (State.models.length === 0) {
             loadSampleModels();
         }
         
-        // Update categories
         updateCategories();
-        
-        // Save to localStorage
         saveToLocalStorage();
-        
-        // Update filtered models
         filterAndSortModels();
         
-        console.log(`Successfully loaded ${State.models.length} models`);
+        console.log(`Loaded ${State.models.length} models`);
         
     } catch (error) {
         console.error('Error loading models:', error);
         showToast(`Failed to load models: ${error.message}`, 'error');
         
-        // Fallback to localStorage or sample models
         if (!loadFromLocalStorage()) {
             loadSampleModels();
         }
@@ -471,15 +383,12 @@ async function importFromGitHub() {
         
         let models = [];
         
-        // If JSON URL is provided, use it
         if (jsonUrl) {
             models = await loadFromJsonUrl(jsonUrl);
         } else {
-            // Otherwise scan the repository
             models = await scanGitHubRepository(repo, path);
         }
         
-        // Process and validate models
         const processedModels = await Promise.all(
             models.map(async (model, index) => {
                 const processedModel = {
@@ -503,7 +412,6 @@ async function importFromGitHub() {
             })
         );
         
-        // Filter out invalid models
         State.models = processedModels.filter(model => model.glbUrl);
         
         showToast(`Imported ${State.models.length} models from GitHub`, 'success');
@@ -511,32 +419,6 @@ async function importFromGitHub() {
     } catch (error) {
         console.error('GitHub import error:', error);
         throw error;
-    }
-}
-
-async function checkGLBSecurity(url) {
-    try {
-        // First check filename
-        const hasFilenameSignature = url.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE);
-        
-        if (!hasFilenameSignature) {
-            return false;
-        }
-        
-        // Then check internal signature
-        const response = await fetch(url);
-        if (!response.ok) {
-            return false;
-        }
-        
-        const arrayBuffer = await response.arrayBuffer();
-        const hasInternalSignature = await glbProcessor.verifyGLBSignature(arrayBuffer);
-        
-        return hasInternalSignature;
-        
-    } catch (error) {
-        console.warn('GLB security check error:', error);
-        return false;
     }
 }
 
@@ -570,7 +452,6 @@ async function scanGitHubRepository(repo, path) {
     try {
         const [owner, repoName] = repo.split('/');
         
-        // Try to get repository contents
         const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}/contents/${path}`;
         const headers = {};
         
@@ -586,13 +467,11 @@ async function scanGitHubRepository(repo, path) {
         
         const contents = await response.json();
         
-        // Filter for GLB files
         const glbFiles = contents.filter(item => 
             item.type === 'file' && 
             item.name.toLowerCase().endsWith('.glb')
         );
         
-        // Convert to model objects
         const models = glbFiles.map(file => {
             const rawUrl = `${CONFIG.GITHUB_API.RAW_CONTENT_URL}/${repo}/main/${path}/${file.name}`;
             
@@ -608,7 +487,7 @@ async function scanGitHubRepository(repo, path) {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 downloads: 0,
-                secure: file.name.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE),
+                secure: false,
                 source: 'github'
             };
         });
@@ -618,6 +497,31 @@ async function scanGitHubRepository(repo, path) {
     } catch (error) {
         console.error('GitHub scan error:', error);
         throw error;
+    }
+}
+
+async function checkGLBSecurity(url) {
+    try {
+        // Quick check for filename signature
+        if (!url.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE)) {
+            return false;
+        }
+        
+        // Download first 1KB to check internal signature
+        const response = await fetch(url, {
+            headers: { 'Range': 'bytes=0-1023' }
+        });
+        
+        if (!response.ok) {
+            return false;
+        }
+        
+        const data = await response.arrayBuffer();
+        return signatureInjector.checkHasSignature(data);
+        
+    } catch (error) {
+        console.warn('Security check error:', error);
+        return false;
     }
 }
 
@@ -666,7 +570,39 @@ function getDefaultThumbnail(category) {
 }
 
 function loadSampleModels() {
-    State.models = CONFIG.SAMPLE_MODELS;
+    State.models = [
+        {
+            id: 'sample_1',
+            name: 'Divine Krishna Statue',
+            description: 'Beautiful 3D model of Lord Krishna playing flute',
+            category: 'Spiritual',
+            tags: ['krishna', 'divine', 'statue', 'hindu'],
+            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
+            fileSize: '4.5 MB',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            downloads: 1250,
+            secure: false,
+            source: 'sample'
+        },
+        {
+            id: 'sample_2',
+            name: 'Meditation Buddha',
+            description: 'Peaceful Buddha statue in meditation pose',
+            category: 'Spiritual',
+            tags: ['buddha', 'meditation', 'peace', 'statue'],
+            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+            fileSize: '3.2 MB',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            downloads: 980,
+            secure: false,
+            source: 'sample'
+        }
+    ];
+    
     updateCategories();
     showToast('Loaded sample models. Configure GitHub import in Admin Panel.', 'info');
     filterAndSortModels();
@@ -680,7 +616,6 @@ function loadFromLocalStorage() {
         if (saved) {
             const data = JSON.parse(saved);
             
-            // Check if data is not too old
             const cacheTime = Date.now() - CONFIG.CACHE_DURATION;
             if (data.timestamp && new Date(data.timestamp).getTime() > cacheTime) {
                 State.models = data.models || [];
@@ -688,14 +623,14 @@ function loadFromLocalStorage() {
                 State.isAdmin = data.isAdmin || false;
                 State.githubConfig = data.githubConfig || State.githubConfig;
                 State.autoSecureDownloads = data.autoSecureDownloads !== false;
+                State.autoInjectSignature = data.autoInjectSignature !== false;
                 
-                // Update admin UI if needed
                 if (State.isAdmin) {
                     showAdminDashboard();
                 }
                 
-                // Update UI elements
-                Elements.autoSecure.checked = State.autoSecureDownloads;
+                if (Elements.autoSecure) Elements.autoSecure.checked = State.autoSecureDownloads;
+                if (Elements.autoSignature) Elements.autoSignature.checked = State.autoInjectSignature;
                 
                 filterAndSortModels();
                 updateStats();
@@ -719,6 +654,7 @@ function saveToLocalStorage() {
             isAdmin: State.isAdmin,
             githubConfig: State.githubConfig,
             autoSecureDownloads: State.autoSecureDownloads,
+            autoInjectSignature: State.autoInjectSignature,
             timestamp: new Date().toISOString()
         };
         localStorage.setItem(CONFIG.LOCAL_STORAGE_KEY, JSON.stringify(data));
@@ -729,20 +665,17 @@ function saveToLocalStorage() {
 
 function loadSavedData() {
     try {
-        // Load theme
         const savedTheme = localStorage.getItem('theme') || 'dark';
         if (savedTheme === 'light') {
             document.body.classList.add('light-theme');
             document.body.classList.remove('dark-theme');
         }
         
-        // Load GitHub config
         const savedConfig = localStorage.getItem('github_config');
         if (savedConfig) {
             State.githubConfig = { ...State.githubConfig, ...JSON.parse(savedConfig) };
         }
         
-        // Update form fields
         if (Elements.githubRepo) {
             Elements.githubRepo.value = State.githubConfig.repo;
             Elements.modelsPath.value = State.githubConfig.path;
@@ -775,43 +708,40 @@ function saveGitHubConfig() {
 }
 
 // ============================================
-// GLB DOWNLOAD WITH AUTO-SIGNATURE
+// AUTO-SIGNATURE DOWNLOAD SYSTEM
 // ============================================
 
-async function downloadModel(model) {
+async function downloadSecuredGLB(model) {
     try {
         showToast(`Securing ${model.name} for download...`, 'info');
         
-        let downloadUrl = model.glbUrl;
-        let securedFilename = model.name.replace(/\s+/g, '_');
-        
-        if (State.autoSecureDownloads) {
-            try {
-                // Add internal signature to GLB
-                const securedUrl = await glbProcessor.secureGLBFile(model.glbUrl);
-                downloadUrl = securedUrl;
-                
-                // Add filename signature
-                if (!securedFilename.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE)) {
-                    securedFilename = `${securedFilename}${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}`;
-                }
-                
-                showToast('GLB secured with Divine Mantra signature', 'success');
-                
-            } catch (securityError) {
-                console.error('Security processing error:', securityError);
-                showToast('Using original file (security processing failed)', 'warning');
-            }
+        // Download the original GLB file
+        const response = await fetch(model.glbUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to download: HTTP ${response.status}`);
         }
         
-        // Ensure .glb extension
-        if (!securedFilename.toLowerCase().endsWith('.glb')) {
-            securedFilename += '.glb';
+        const originalData = await response.arrayBuffer();
+        
+        let securedData;
+        let securedFilename;
+        
+        if (State.autoInjectSignature) {
+            // Inject signature into GLB
+            securedData = await signatureInjector.injectSignature(originalData);
+            securedFilename = `${model.name.replace(/\s+/g, '_')}${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}_secured.glb`;
+        } else {
+            // Just rename with signature in filename
+            securedData = originalData;
+            securedFilename = `${model.name.replace(/\s+/g, '_')}${CONFIG.GLB_SECURITY.FILENAME_SIGNATURE}.glb`;
         }
         
         // Create download link
+        const blob = new Blob([securedData], { type: 'model/gltf-binary' });
+        const url = URL.createObjectURL(blob);
+        
         const a = document.createElement('a');
-        a.href = downloadUrl;
+        a.href = url;
         a.download = securedFilename;
         a.style.display = 'none';
         a.rel = 'noopener noreferrer';
@@ -822,9 +752,7 @@ async function downloadModel(model) {
         // Cleanup
         setTimeout(() => {
             document.body.removeChild(a);
-            if (downloadUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(downloadUrl);
-            }
+            URL.revokeObjectURL(url);
         }, 100);
         
         // Update download count
@@ -832,11 +760,60 @@ async function downloadModel(model) {
         saveToLocalStorage();
         updateAdminModelList();
         
-        showToast(`${model.name} downloaded successfully!`, 'success');
+        showToast(`${model.name} downloaded with Divine Mantra signature!`, 'success');
+        
+        // Verify the downloaded file has signature
+        if (State.autoInjectSignature) {
+            const hasSignature = signatureInjector.checkHasSignature(securedData);
+            if (hasSignature) {
+                showToast('✓ Signature verified - Ready for app upload', 'success');
+            } else {
+                showToast('⚠ Signature verification failed', 'warning');
+            }
+        }
         
     } catch (error) {
         console.error('Download error:', error);
         showToast(`Failed to download: ${error.message}`, 'error');
+        
+        // Fallback to direct download
+        downloadDirectGLB(model);
+    }
+}
+
+function downloadDirectGLB(model) {
+    try {
+        const a = document.createElement('a');
+        a.href = model.glbUrl;
+        a.download = `${model.name.replace(/\s+/g, '_')}.glb`;
+        a.style.display = 'none';
+        a.rel = 'noopener noreferrer';
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            document.body.removeChild(a);
+        }, 100);
+        
+        model.downloads = (model.downloads || 0) + 1;
+        saveToLocalStorage();
+        
+        showToast(`${model.name} download started!`, 'success');
+        
+    } catch (error) {
+        console.error('Direct download error:', error);
+        showToast('Failed to download file', 'error');
+    }
+}
+
+async function downloadModel(model) {
+    if (State.autoSecureDownloads && State.autoInjectSignature) {
+        await downloadSecuredGLB(model);
+    } else if (State.autoSecureDownloads) {
+        await downloadSecuredGLB(model);
+    } else {
+        downloadDirectGLB(model);
     }
 }
 
@@ -845,7 +822,9 @@ async function downloadModel(model) {
 // ============================================
 
 function updateStats() {
-    Elements.totalModels.textContent = State.models.length;
+    if (Elements.totalModels) {
+        Elements.totalModels.textContent = State.models.length;
+    }
 }
 
 function updateLoadingIndicator(show) {
@@ -878,11 +857,11 @@ function updateCategories() {
 }
 
 function populateCategories() {
-    // Clear existing
+    if (!Elements.categoriesContainer || !Elements.categoryFilter) return;
+    
     Elements.categoriesContainer.innerHTML = '';
     Elements.categoryFilter.innerHTML = '<option value="all">All Categories</option>';
     
-    // Add "All" category first
     const allCategory = document.createElement('div');
     allCategory.className = 'category-card';
     allCategory.innerHTML = `
@@ -893,11 +872,9 @@ function populateCategories() {
     allCategory.onclick = () => filterByCategory('all');
     Elements.categoriesContainer.appendChild(allCategory);
     
-    // Add actual categories
     State.categories.forEach(category => {
         const count = State.models.filter(m => m.category === category).length;
         
-        // Category card
         const card = document.createElement('div');
         card.className = 'category-card';
         card.innerHTML = `
@@ -908,7 +885,6 @@ function populateCategories() {
         card.onclick = () => filterByCategory(category);
         Elements.categoriesContainer.appendChild(card);
         
-        // Filter option
         const option = document.createElement('option');
         option.value = category;
         option.textContent = `${category} (${count})`;
@@ -917,17 +893,17 @@ function populateCategories() {
 }
 
 function renderModels() {
-    if (State.isLoading) return;
+    if (State.isLoading || !Elements.galleryContainer) return;
     
     Elements.galleryContainer.innerHTML = '';
     
     if (State.filteredModels.length === 0) {
-        Elements.noResults.style.display = 'block';
-        Elements.loadingIndicator.style.display = 'none';
+        if (Elements.noResults) Elements.noResults.style.display = 'block';
+        if (Elements.loadingIndicator) Elements.loadingIndicator.style.display = 'none';
         return;
     }
     
-    Elements.noResults.style.display = 'none';
+    if (Elements.noResults) Elements.noResults.style.display = 'none';
     
     const container = document.createElement('div');
     container.className = State.viewMode === 'grid' ? 'models-grid' : 'models-list';
@@ -945,7 +921,6 @@ function createModelCard(model, index) {
     card.className = 'model-card';
     card.style.animationDelay = `${index * 0.1}s`;
     
-    // Thumbnail or placeholder
     let thumbnailHTML = '';
     if (model.thumbnailUrl) {
         thumbnailHTML = `
@@ -958,16 +933,12 @@ function createModelCard(model, index) {
         thumbnailHTML = '<div class="thumbnail-placeholder">🎨</div>';
     }
     
-    // Security badge
-    const securityBadge = model.secure ? 
-        '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Pre-Secured</span>' : 
-        '<span class="model-badge" style="left: auto; right: 1rem; background: var(--info);">🔄 Auto-Secure</span>';
-    
     card.innerHTML = `
         <div class="model-thumbnail">
             ${thumbnailHTML}
             <span class="model-badge">${model.category}</span>
-            ${securityBadge}
+            ${model.secure ? '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Secured</span>' : 
+              '<span class="model-badge" style="left: auto; right: 1rem; background: var(--warning);">⚠️ Auto-Secure</span>'}
         </div>
         <div class="model-content">
             <div class="model-header">
@@ -985,13 +956,12 @@ function createModelCard(model, index) {
                     <i class="fas fa-eye"></i> Preview 3D
                 </button>
                 <button class="action-btn download-btn">
-                    <i class="fas fa-download"></i> ${State.autoSecureDownloads ? 'Download Secured' : 'Download'}
+                    <i class="fas fa-download"></i> ${State.autoInjectSignature ? 'Download Secured' : 'Download'}
                 </button>
             </div>
         </div>
     `;
     
-    // Add event listeners
     const previewBtn = card.querySelector('.preview-btn');
     const downloadBtn = card.querySelector('.download-btn');
     
@@ -1017,7 +987,6 @@ function createModelCard(model, index) {
 function filterAndSortModels() {
     let filtered = [...State.models];
     
-    // Apply search filter
     if (State.searchQuery) {
         const query = State.searchQuery.toLowerCase();
         filtered = filtered.filter(model => 
@@ -1028,12 +997,10 @@ function filterAndSortModels() {
         );
     }
     
-    // Apply category filter
     if (State.currentCategory !== 'all') {
         filtered = filtered.filter(model => model.category === State.currentCategory);
     }
     
-    // Apply sorting
     filtered.sort((a, b) => {
         switch (State.sortBy) {
             case 'name-asc':
@@ -1055,7 +1022,9 @@ function filterAndSortModels() {
 
 function filterByCategory(category) {
     State.currentCategory = category;
-    Elements.categoryFilter.value = category;
+    if (Elements.categoryFilter) {
+        Elements.categoryFilter.value = category;
+    }
     filterAndSortModels();
     scrollToSection('gallery');
 }
@@ -1075,9 +1044,9 @@ function clearFilters() {
     State.currentCategory = 'all';
     State.sortBy = 'name-asc';
     
-    Elements.gallerySearch.value = '';
-    Elements.categoryFilter.value = 'all';
-    Elements.sortSelect.value = 'name-asc';
+    if (Elements.gallerySearch) Elements.gallerySearch.value = '';
+    if (Elements.categoryFilter) Elements.categoryFilter.value = 'all';
+    if (Elements.sortSelect) Elements.sortSelect.value = 'name-asc';
     
     filterAndSortModels();
 }
@@ -1089,77 +1058,50 @@ function clearFilters() {
 function openPreview(model) {
     State.currentPreviewModel = model;
     
-    // Update modal content
-    Elements.previewTitle.textContent = model.name;
-    Elements.previewSubtitle.textContent = model.category;
-    Elements.previewName.textContent = model.name;
-    Elements.previewCategory.textContent = model.category;
-    Elements.previewSize.textContent = model.fileSize;
-    Elements.previewDate.textContent = formatDate(model.createdAt);
-    Elements.previewDescription.textContent = model.description || 'No description available.';
+    if (Elements.previewTitle) Elements.previewTitle.textContent = model.name;
+    if (Elements.previewSubtitle) Elements.previewSubtitle.textContent = model.category;
+    if (Elements.previewName) Elements.previewName.textContent = model.name;
+    if (Elements.previewCategory) Elements.previewCategory.textContent = model.category;
+    if (Elements.previewSize) Elements.previewSize.textContent = model.fileSize;
+    if (Elements.previewDate) Elements.previewDate.textContent = formatDate(model.createdAt);
+    if (Elements.previewDescription) Elements.previewDescription.textContent = model.description || 'No description available.';
     
-    // Update tags
-    Elements.previewTags.innerHTML = '';
-    if (model.tags && model.tags.length > 0) {
-        model.tags.forEach(tag => {
-            const tagElement = document.createElement('span');
-            tagElement.className = 'tag';
-            tagElement.textContent = tag;
-            Elements.previewTags.appendChild(tagElement);
-        });
+    if (Elements.previewTags) {
+        Elements.previewTags.innerHTML = '';
+        if (model.tags && model.tags.length > 0) {
+            model.tags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.className = 'tag';
+                tagElement.textContent = tag;
+                Elements.previewTags.appendChild(tagElement);
+            });
+        }
     }
     
-    // Load model in viewer
-    Elements.previewViewer.src = model.glbUrl;
+    if (Elements.previewViewer) {
+        Elements.previewViewer.src = model.glbUrl;
+        Elements.previewViewer.autoRotate = State.autoRotateEnabled;
+    }
     
-    // Reset viewer controls
-    Elements.previewViewer.autoRotate = State.autoRotateEnabled;
-    Elements.rotateToggle.classList.toggle('active', State.autoRotateEnabled);
+    if (Elements.rotateToggle) {
+        Elements.rotateToggle.classList.toggle('active', State.autoRotateEnabled);
+    }
     
-    // Show modal
-    Elements.previewModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    if (Elements.previewModal) {
+        Elements.previewModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 function closePreview() {
-    Elements.previewModal.classList.remove('active');
-    document.body.style.overflow = '';
-    Elements.previewViewer.src = '';
+    if (Elements.previewModal) {
+        Elements.previewModal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    if (Elements.previewViewer) {
+        Elements.previewViewer.src = '';
+    }
     State.currentPreviewModel = null;
-}
-
-async function copyModelUrl() {
-    if (!State.currentPreviewModel) return;
-    
-    try {
-        await navigator.clipboard.writeText(State.currentPreviewModel.glbUrl);
-        showToast('Model URL copied to clipboard!', 'success');
-    } catch (error) {
-        console.error('Copy error:', error);
-        showToast('Failed to copy URL', 'error');
-    }
-}
-
-async function shareModel() {
-    if (!State.currentPreviewModel) return;
-    
-    try {
-        if (navigator.share) {
-            await navigator.share({
-                title: State.currentPreviewModel.name,
-                text: State.currentPreviewModel.description,
-                url: window.location.href + '#preview'
-            });
-        } else {
-            await navigator.clipboard.writeText(window.location.href);
-            showToast('Link copied to clipboard!', 'success');
-        }
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error('Share error:', error);
-            showToast('Failed to share', 'error');
-        }
-    }
 }
 
 // ============================================
@@ -1167,30 +1109,36 @@ async function shareModel() {
 // ============================================
 
 function openAdminPanel() {
-    Elements.adminOverlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    updateAdminModelList();
-    updateAdminStatus('Ready');
+    if (Elements.adminOverlay) {
+        Elements.adminOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        updateAdminModelList();
+        updateAdminStatus('Ready');
+    }
 }
 
 function closeAdminPanel() {
-    Elements.adminOverlay.classList.remove('active');
-    document.body.style.overflow = '';
-    Elements.importStatus.style.display = 'none';
+    if (Elements.adminOverlay) {
+        Elements.adminOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    if (Elements.importStatus) {
+        Elements.importStatus.style.display = 'none';
+    }
 }
 
 function showAdminDashboard() {
-    Elements.adminLogin.style.display = 'none';
-    Elements.adminDashboard.style.display = 'block';
+    if (Elements.adminLogin) Elements.adminLogin.style.display = 'none';
+    if (Elements.adminDashboard) Elements.adminDashboard.style.display = 'block';
     State.isAdmin = true;
     saveToLocalStorage();
     updateAdminStatus('Ready');
 }
 
 function hideAdminDashboard() {
-    Elements.adminDashboard.style.display = 'none';
-    Elements.adminLogin.style.display = 'block';
-    Elements.adminPassword.value = '';
+    if (Elements.adminDashboard) Elements.adminDashboard.style.display = 'none';
+    if (Elements.adminLogin) Elements.adminLogin.style.display = 'block';
+    if (Elements.adminPassword) Elements.adminPassword.value = '';
     State.isAdmin = false;
     saveToLocalStorage();
 }
@@ -1202,6 +1150,8 @@ function checkAdminStatus() {
 }
 
 function updateAdminModelList() {
+    if (!Elements.adminModelsList || !Elements.modelsCount) return;
+    
     Elements.adminModelsList.innerHTML = '';
     Elements.modelsCount.textContent = State.models.length;
     
@@ -1300,48 +1250,46 @@ async function testGitHubConnection() {
 
 async function importModelsFromGitHub() {
     try {
-        // Save configuration first
         saveGitHubConfig();
         
         updateAdminStatus('Starting import...', 'loading');
-        Elements.importStatus.style.display = 'block';
-        Elements.importDetails.innerHTML = '<p>Connecting to GitHub repository...</p>';
+        if (Elements.importStatus) Elements.importStatus.style.display = 'block';
+        if (Elements.importDetails) Elements.importDetails.innerHTML = '<p>Connecting to GitHub repository...</p>';
         
-        // Test connection first
         await testGitHubConnection();
         
-        Elements.importDetails.innerHTML += '<p>Scanning for GLB files...</p>';
+        if (Elements.importDetails) Elements.importDetails.innerHTML += '<p>Scanning for GLB files...</p>';
         
-        // Import models
         const previousCount = State.models.length;
         await importFromGitHub();
         
         const importedCount = State.models.length - previousCount;
         
-        // Update UI
         updateStats();
         populateCategories();
         filterAndSortModels();
         updateAdminModelList();
         
-        Elements.importDetails.innerHTML += `
-            <p><strong>Import completed successfully!</strong></p>
-            <p>Imported ${importedCount} new models</p>
-            <p>Total models: ${State.models.length}</p>
-            <p>Security: All downloads will be auto-secured with Divine Mantra signature</p>
-        `;
+        if (Elements.importDetails) {
+            Elements.importDetails.innerHTML += `
+                <p><strong>Import completed successfully!</strong></p>
+                <p>Imported ${importedCount} new models</p>
+                <p>Total models: ${State.models.length}</p>
+            `;
+        }
         
         updateAdminStatus('Import completed', 'success');
         showToast(`Imported ${importedCount} models from GitHub`, 'success');
         
-        // Auto-close status after 5 seconds
         setTimeout(() => {
-            Elements.importStatus.style.display = 'none';
+            if (Elements.importStatus) Elements.importStatus.style.display = 'none';
         }, 5000);
         
     } catch (error) {
         console.error('Import error:', error);
-        Elements.importDetails.innerHTML += `<p style="color: var(--error);"><strong>Import failed:</strong> ${error.message}</p>`;
+        if (Elements.importDetails) {
+            Elements.importDetails.innerHTML += `<p style="color: var(--error);"><strong>Import failed:</strong> ${error.message}</p>`;
+        }
         updateAdminStatus('Import failed', 'error');
         showToast(`Import failed: ${error.message}`, 'error');
     }
@@ -1418,16 +1366,20 @@ function deleteModelFromGallery(modelId) {
 // ============================================
 
 function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    } catch (error) {
+        return 'Unknown';
+    }
 }
 
 function formatFileSize(bytes) {
-    if (typeof bytes !== 'number') return 'Unknown';
+    if (typeof bytes !== 'number' || isNaN(bytes)) return 'Unknown';
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -1436,6 +1388,8 @@ function formatFileSize(bytes) {
 }
 
 function showToast(message, type = 'info') {
+    if (!Elements.toastContainer) return;
+    
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     
@@ -1465,7 +1419,6 @@ function showToast(message, type = 'info') {
     
     Elements.toastContainer.appendChild(toast);
     
-    // Auto remove after 3 seconds
     setTimeout(() => {
         if (toast.parentNode) {
             toast.style.animation = 'fadeOut 0.3s ease forwards';
@@ -1486,21 +1439,27 @@ function scrollToTop() {
 }
 
 function updateAdminStatus(message, type = 'ready') {
+    if (!Elements.adminStatus) return;
+    
     const icon = Elements.adminStatus.querySelector('i');
     const text = Elements.adminStatus.querySelector('span');
     
-    text.textContent = message;
+    if (text) text.textContent = message;
     
     if (type === 'loading') {
-        icon.className = 'fas fa-circle status-loading';
+        if (icon) icon.className = 'fas fa-circle status-loading';
     } else if (type === 'error') {
-        icon.className = 'fas fa-circle';
-        icon.style.color = 'var(--error)';
+        if (icon) {
+            icon.className = 'fas fa-circle';
+            icon.style.color = 'var(--error)';
+        }
     } else if (type === 'success') {
-        icon.className = 'fas fa-circle';
-        icon.style.color = 'var(--success)';
+        if (icon) {
+            icon.className = 'fas fa-circle';
+            icon.style.color = 'var(--success)';
+        }
     } else {
-        icon.className = 'fas fa-circle status-ready';
+        if (icon) icon.className = 'fas fa-circle status-ready';
     }
 }
 
@@ -1510,217 +1469,264 @@ function updateAdminStatus(message, type = 'ready') {
 
 function setupEventListeners() {
     // Theme toggle
-    Elements.themeToggle.onclick = () => {
-        document.body.classList.toggle('light-theme');
-        document.body.classList.toggle('dark-theme');
-        localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
-    };
+    if (Elements.themeToggle) {
+        Elements.themeToggle.onclick = () => {
+            document.body.classList.toggle('light-theme');
+            document.body.classList.toggle('dark-theme');
+            localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
+        };
+    }
     
     // Header scroll effect
     window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            Elements.mainHeader.classList.add('scrolled');
-        } else {
-            Elements.mainHeader.classList.remove('scrolled');
+        if (Elements.mainHeader) {
+            if (window.scrollY > 50) {
+                Elements.mainHeader.classList.add('scrolled');
+            } else {
+                Elements.mainHeader.classList.remove('scrolled');
+            }
         }
         
-        // Show/hide scroll to top FAB
-        if (window.scrollY > 500) {
-            Elements.fabScrollTop.classList.add('visible');
-        } else {
-            Elements.fabScrollTop.classList.remove('visible');
+        if (Elements.fabScrollTop) {
+            if (window.scrollY > 500) {
+                Elements.fabScrollTop.classList.add('visible');
+            } else {
+                Elements.fabScrollTop.classList.remove('visible');
+            }
         }
     });
     
     // Navigation
-    Elements.navToggle.onclick = () => {
-        Elements.navLinks.classList.toggle('active');
-    };
-    
-    // Close nav when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!Elements.navToggle.contains(e.target) && !Elements.navLinks.contains(e.target)) {
-            Elements.navLinks.classList.remove('active');
-        }
-    });
+    if (Elements.navToggle && Elements.navLinks) {
+        Elements.navToggle.onclick = () => {
+            Elements.navLinks.classList.toggle('active');
+        };
+        
+        document.addEventListener('click', (e) => {
+            if (!Elements.navToggle.contains(e.target) && !Elements.navLinks.contains(e.target)) {
+                Elements.navLinks.classList.remove('active');
+            }
+        });
+    }
     
     // Search
-    Elements.searchBtn.onclick = () => {
-        searchModels(Elements.searchInput.value);
-    };
-    
-    Elements.searchInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') {
+    if (Elements.searchBtn && Elements.searchInput) {
+        Elements.searchBtn.onclick = () => {
             searchModels(Elements.searchInput.value);
-        }
-    });
+        };
+        
+        Elements.searchInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                searchModels(Elements.searchInput.value);
+            }
+        });
+    }
     
-    Elements.gallerySearch.addEventListener('input', (e) => {
-        searchModels(e.target.value);
-    });
+    if (Elements.gallerySearch) {
+        Elements.gallerySearch.addEventListener('input', (e) => {
+            searchModels(e.target.value);
+        });
+    }
     
     // Filters
-    Elements.categoryFilter.addEventListener('change', (e) => {
-        filterByCategory(e.target.value);
-    });
+    if (Elements.categoryFilter) {
+        Elements.categoryFilter.addEventListener('change', (e) => {
+            filterByCategory(e.target.value);
+        });
+    }
     
-    Elements.clearFilters.onclick = clearFilters;
+    if (Elements.clearFilters) {
+        Elements.clearFilters.onclick = clearFilters;
+    }
     
-    Elements.sortSelect.addEventListener('change', (e) => {
-        sortModels(e.target.value);
-    });
+    if (Elements.sortSelect) {
+        Elements.sortSelect.addEventListener('change', (e) => {
+            sortModels(e.target.value);
+        });
+    }
     
     // View mode
-    Elements.viewBtns.forEach(btn => {
-        btn.onclick = () => {
-            Elements.viewBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            State.viewMode = btn.dataset.view;
-            renderModels();
-        };
-    });
+    if (Elements.viewBtns) {
+        Elements.viewBtns.forEach(btn => {
+            btn.onclick = () => {
+                Elements.viewBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                State.viewMode = btn.dataset.view;
+                renderModels();
+            };
+        });
+    }
     
     // Refresh
-    Elements.refreshBtn.onclick = async () => {
-        Elements.refreshBtn.classList.add('loading');
-        await loadModels();
-        Elements.refreshBtn.classList.remove('loading');
-        showToast('Models refreshed!', 'success');
-    };
+    if (Elements.refreshBtn) {
+        Elements.refreshBtn.onclick = async () => {
+            Elements.refreshBtn.classList.add('loading');
+            await loadModels();
+            Elements.refreshBtn.classList.remove('loading');
+            showToast('Models refreshed!', 'success');
+        };
+    }
     
     // Admin
-    Elements.adminBtn.onclick = openAdminPanel;
-    Elements.closeAdmin.onclick = closeAdminPanel;
-    Elements.fabImport.onclick = openAdminPanel;
+    if (Elements.adminBtn) Elements.adminBtn.onclick = openAdminPanel;
+    if (Elements.closeAdmin) Elements.closeAdmin.onclick = closeAdminPanel;
+    if (Elements.fabImport) Elements.fabImport.onclick = openAdminPanel;
     
-    Elements.loginBtn.onclick = () => {
-        if (Elements.adminPassword.value === CONFIG.ADMIN_PASSWORD) {
-            showAdminDashboard();
-            showToast('Admin panel unlocked!', 'success');
-        } else {
-            showToast('Incorrect password', 'error');
-        }
-    };
+    if (Elements.loginBtn && Elements.adminPassword) {
+        Elements.loginBtn.onclick = () => {
+            if (Elements.adminPassword.value === CONFIG.ADMIN_PASSWORD) {
+                showAdminDashboard();
+                showToast('Admin panel unlocked!', 'success');
+            } else {
+                showToast('Incorrect password', 'error');
+            }
+        };
+    }
     
-    Elements.logoutBtn.onclick = () => {
-        hideAdminDashboard();
-        showToast('Logged out from admin panel', 'info');
-    };
+    if (Elements.logoutBtn) {
+        Elements.logoutBtn.onclick = () => {
+            hideAdminDashboard();
+            showToast('Logged out from admin panel', 'info');
+        };
+    }
     
     // Admin tabs
-    Elements.tabBtns.forEach(btn => {
-        btn.onclick = () => {
-            // Update active tab
-            Elements.tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Show corresponding pane
-            const tabId = btn.dataset.tab;
-            Elements.tabPanes.forEach(pane => {
-                pane.classList.remove('active');
-                if (pane.id === `${tabId}Tab`) {
-                    pane.classList.add('active');
-                }
-            });
-        };
-    });
+    if (Elements.tabBtns && Elements.tabPanes) {
+        Elements.tabBtns.forEach(btn => {
+            btn.onclick = () => {
+                Elements.tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const tabId = btn.dataset.tab;
+                Elements.tabPanes.forEach(pane => {
+                    pane.classList.remove('active');
+                    if (pane.id === `${tabId}Tab`) {
+                        pane.classList.add('active');
+                    }
+                });
+            };
+        });
+    }
     
     // GitHub Import
-    Elements.testConnection.onclick = testGitHubConnection;
-    Elements.importModelsBtn.onclick = importModelsFromGitHub;
+    if (Elements.testConnection) Elements.testConnection.onclick = testGitHubConnection;
+    if (Elements.importModelsBtn) Elements.importModelsBtn.onclick = importModelsFromGitHub;
     
     // Save GitHub config on change
-    [Elements.githubRepo, Elements.modelsPath, Elements.jsonUrl, Elements.autoRefresh, Elements.defaultCategory]
-        .forEach(element => {
+    const githubElements = [Elements.githubRepo, Elements.modelsPath, Elements.jsonUrl, Elements.autoRefresh, Elements.defaultCategory];
+    githubElements.forEach(element => {
+        if (element) {
             element.addEventListener('change', saveGitHubConfig);
-        });
-    
-    // Model Management
-    Elements.exportModels.onclick = exportModelList;
-    Elements.clearAllModels.onclick = clearAllModels;
-    
-    // Security
-    Elements.autoSecure.addEventListener('change', (e) => {
-        State.autoSecureDownloads = e.target.checked;
-        saveToLocalStorage();
-        showToast(`Auto-secure downloads ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
-        renderModels(); // Update button text
+        }
     });
     
-    Elements.resetSecurity.onclick = () => {
-        if (confirm('Reset all security settings to defaults?')) {
-            State.autoSecureDownloads = true;
-            Elements.autoSecure.checked = true;
-            saveToLocalStorage();
-            showToast('Security settings reset to defaults', 'success');
-            renderModels();
-        }
-    };
+    // Model Management
+    if (Elements.exportModels) Elements.exportModels.onclick = exportModelList;
+    if (Elements.clearAllModels) Elements.clearAllModels.onclick = clearAllModels;
     
-    Elements.backupData.onclick = () => {
-        saveToLocalStorage();
-        showToast('All data backed up to local storage', 'success');
-    };
+    // Security
+    if (Elements.autoSecure) {
+        Elements.autoSecure.addEventListener('change', (e) => {
+            State.autoSecureDownloads = e.target.checked;
+            saveToLocalStorage();
+            showToast(`Auto-secure downloads ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+        });
+    }
+    
+    if (Elements.autoSignature) {
+        Elements.autoSignature.addEventListener('change', (e) => {
+            State.autoInjectSignature = e.target.checked;
+            saveToLocalStorage();
+            showToast(`Auto-signature injection ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+        });
+    }
+    
+    if (Elements.resetSecurity) {
+        Elements.resetSecurity.onclick = () => {
+            if (confirm('Reset all security settings to defaults?')) {
+                State.autoSecureDownloads = true;
+                State.autoInjectSignature = true;
+                if (Elements.autoSecure) Elements.autoSecure.checked = true;
+                if (Elements.autoSignature) Elements.autoSignature.checked = true;
+                saveToLocalStorage();
+                showToast('Security settings reset to defaults', 'success');
+            }
+        };
+    }
+    
+    if (Elements.backupData) {
+        Elements.backupData.onclick = () => {
+            saveToLocalStorage();
+            showToast('All data backed up to local storage', 'success');
+        };
+    }
     
     // Preview modal
-    Elements.closePreview.onclick = closePreview;
-    Elements.previewModal.onclick = (e) => {
-        if (e.target === Elements.previewModal) {
-            closePreview();
-        }
-    };
+    if (Elements.closePreview) Elements.closePreview.onclick = closePreview;
+    if (Elements.previewModal) {
+        Elements.previewModal.onclick = (e) => {
+            if (e.target === Elements.previewModal) {
+                closePreview();
+            }
+        };
+    }
     
-    Elements.downloadModel.onclick = () => {
-        if (State.currentPreviewModel) {
-            downloadModel(State.currentPreviewModel);
-        }
-    };
+    if (Elements.downloadModel) {
+        Elements.downloadModel.onclick = () => {
+            if (State.currentPreviewModel) {
+                downloadModel(State.currentPreviewModel);
+            }
+        };
+    }
     
-    Elements.copyUrl.onclick = copyModelUrl;
-    Elements.shareModel.onclick = shareModel;
+    if (Elements.copyUrl) Elements.copyUrl.onclick = copyModelUrl;
+    if (Elements.shareModel) Elements.shareModel.onclick = shareModel;
     
-    Elements.rotateToggle.onclick = () => {
-        State.autoRotateEnabled = !State.autoRotateEnabled;
-        Elements.previewViewer.autoRotate = State.autoRotateEnabled;
-        Elements.rotateToggle.classList.toggle('active', State.autoRotateEnabled);
-        showToast(`Auto-rotate ${State.autoRotateEnabled ? 'enabled' : 'disabled'}`, 'info');
-    };
+    if (Elements.rotateToggle) {
+        Elements.rotateToggle.onclick = () => {
+            State.autoRotateEnabled = !State.autoRotateEnabled;
+            if (Elements.previewViewer) Elements.previewViewer.autoRotate = State.autoRotateEnabled;
+            Elements.rotateToggle.classList.toggle('active', State.autoRotateEnabled);
+            showToast(`Auto-rotate ${State.autoRotateEnabled ? 'enabled' : 'disabled'}`, 'info');
+        };
+    }
     
-    Elements.fullscreenToggle.onclick = () => {
-        if (Elements.previewViewer.requestFullscreen) {
-            Elements.previewViewer.requestFullscreen();
-        } else if (Elements.previewViewer.webkitRequestFullscreen) {
-            Elements.previewViewer.webkitRequestFullscreen();
-        }
-    };
+    if (Elements.fullscreenToggle && Elements.previewViewer) {
+        Elements.fullscreenToggle.onclick = () => {
+            if (Elements.previewViewer.requestFullscreen) {
+                Elements.previewViewer.requestFullscreen();
+            } else if (Elements.previewViewer.webkitRequestFullscreen) {
+                Elements.previewViewer.webkitRequestFullscreen();
+            }
+        };
+    }
     
-    Elements.resetView.onclick = () => {
-        Elements.previewViewer.cameraOrbit = '0deg 75deg 105%';
-        Elements.previewViewer.fieldOfView = '30deg';
-    };
+    if (Elements.resetView && Elements.previewViewer) {
+        Elements.resetView.onclick = () => {
+            Elements.previewViewer.cameraOrbit = '0deg 75deg 105%';
+            Elements.previewViewer.fieldOfView = '30deg';
+        };
+    }
     
     // Scroll to top
-    Elements.fabScrollTop.onclick = scrollToTop;
+    if (Elements.fabScrollTop) Elements.fabScrollTop.onclick = scrollToTop;
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        // ESC to close modals
         if (e.key === 'Escape') {
-            if (Elements.previewModal.classList.contains('active')) {
+            if (Elements.previewModal && Elements.previewModal.classList.contains('active')) {
                 closePreview();
             }
-            if (Elements.adminOverlay.classList.contains('active')) {
+            if (Elements.adminOverlay && Elements.adminOverlay.classList.contains('active')) {
                 closeAdminPanel();
             }
         }
         
-        // Ctrl/Cmd + F to focus search
         if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
             e.preventDefault();
-            Elements.searchInput.focus();
+            if (Elements.searchInput) Elements.searchInput.focus();
         }
         
-        // Ctrl/Cmd + K to open admin
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
             openAdminPanel();
@@ -1728,10 +1734,12 @@ function setupEventListeners() {
     });
     
     // Handle model viewer errors
-    Elements.previewViewer.addEventListener('error', (e) => {
-        console.error('Model viewer error:', e);
-        showToast('Failed to load 3D model. The file might be corrupted or inaccessible.', 'error');
-    });
+    if (Elements.previewViewer) {
+        Elements.previewViewer.addEventListener('error', (e) => {
+            console.error('Model viewer error:', e);
+            showToast('Failed to load 3D model. The file might be corrupted or inaccessible.', 'error');
+        });
+    }
     
     // Initialize hero preview with first model
     if (Elements.heroPreview && State.models.length > 0) {
@@ -1752,18 +1760,62 @@ function setupEventListeners() {
     }, { passive: false });
 }
 
+async function copyModelUrl() {
+    if (!State.currentPreviewModel) return;
+    
+    try {
+        await navigator.clipboard.writeText(State.currentPreviewModel.glbUrl);
+        showToast('Model URL copied to clipboard!', 'success');
+    } catch (error) {
+        console.error('Copy error:', error);
+        showToast('Failed to copy URL', 'error');
+    }
+}
+
+async function shareModel() {
+    if (!State.currentPreviewModel) return;
+    
+    try {
+        if (navigator.share) {
+            await navigator.share({
+                title: State.currentPreviewModel.name,
+                text: State.currentPreviewModel.description,
+                url: window.location.href + '#preview'
+            });
+        } else {
+            await navigator.clipboard.writeText(window.location.href);
+            showToast('Link copied to clipboard!', 'success');
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error('Share error:', error);
+            showToast('Failed to share', 'error');
+        }
+    }
+}
+
+// ============================================
+// GLOBAL CONFIGURATION
+// ============================================
+
+// GitHub API Configuration
+CONFIG.GITHUB_API = {
+    BASE_URL: 'https://api.github.com',
+    RAW_CONTENT_URL: 'https://raw.githubusercontent.com',
+    TOKEN: null // Add your GitHub token here for private repos
+};
+
 // ============================================
 // INITIALIZE
 // ============================================
 
-// Initialize when DOM is loaded
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
 }
 
-// Expose key functions to global scope for HTML event handlers
+// Expose key functions to global scope
 window.openPreview = openPreview;
 window.downloadModel = downloadModel;
 window.openAdminPanel = openAdminPanel;
@@ -1772,15 +1824,6 @@ window.scrollToSection = scrollToSection;
 window.scrollToTop = scrollToTop;
 window.clearFilters = clearFilters;
 window.filterByCategory = filterByCategory;
-
-// Service Worker for offline support (optional)
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(error => {
-            console.log('ServiceWorker registration failed:', error);
-        });
-    });
-}
 
 // Handle online/offline status
 window.addEventListener('online', () => {
