@@ -482,7 +482,7 @@ async function scanGitHubRepository(repo, path) {
                 category: State.githubConfig.defaultCategory || 'Spiritual',
                 tags: [],
                 glbUrl: rawUrl,
-                thumbnailUrl: '',
+                thumbnailUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
                 fileSize: formatFileSize(file.size),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -578,7 +578,7 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['krishna', 'divine', 'statue', 'hindu'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
+            thumbnailUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
             fileSize: '4.5 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -593,7 +593,7 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['buddha', 'meditation', 'peace', 'statue'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+            thumbnailUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
             fileSize: '3.2 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -1834,4 +1834,5 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
+
 
