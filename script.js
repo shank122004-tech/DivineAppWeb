@@ -5,7 +5,7 @@
 const CONFIG = {
     DEFAULT_GITHUB_REPO: 'shank122004-tech/DivineAppWeb',
     DEFAULT_MODELS_PATH: 'models',
-    ADMIN_PASSWORD: 'admin123',
+    ADMIN_PASSWORD: 'Shashank@122004',
     LOCAL_STORAGE_KEY: 'divine3d_gallery_data',
     CACHE_DURATION: 15 * 60 * 1000, // 15 minutes
     
@@ -1834,3 +1834,4 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
+
