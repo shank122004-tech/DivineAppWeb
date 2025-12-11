@@ -1,25 +1,41 @@
+
 [
   {
-    "id": "test_model_1",
+    "id": "sample_1",
     "name": "Divine Krishna Statue",
-    "description": "Beautiful 3D model of Lord Krishna",
+    "description": "Beautiful 3D model of Lord Krishna playing flute",
     "category": "Spiritual",
-    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
+    "tags": [
+      "krishna",
+      "divine",
+      "statue",
+      "hindu"
+    ],
+    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/lord_krishna_3d_model.glb",
     "thumbnailUrl": "https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop",
-    "tags": ["hindu", "krishna", "divine", "statue"],
+    "fileSize": "4.5 MB",
     "createdAt": "2024-01-15",
-    "updatedAt": "2024-01-15"
+    "updatedAt": "2024-01-15",
+    "downloads": 1251,
+    "rating": 4.8
   },
   {
-    "id": "test_model_2",
+    "id": "sample_2",
     "name": "Meditation Buddha",
-    "description": "Peaceful Buddha statue",
+    "description": "Peaceful Buddha statue in meditation pose",
     "category": "Spiritual",
-    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/lord_krishna_3d_model.glb",
+    "tags": [
+      "buddha",
+      "meditation",
+      "peace",
+      "statue"
+    ],
+    "glbUrl": "https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb",
     "thumbnailUrl": "https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop",
-    "tags": ["buddha", "meditation", "peace"],
+    "fileSize": "3.2 MB",
     "createdAt": "2024-01-14",
-    "updatedAt": "2024-01-14"
-  },
-
+    "updatedAt": "2024-01-14",
+    "downloads": 980,
+    "rating": 4.9
+  }
 ]
