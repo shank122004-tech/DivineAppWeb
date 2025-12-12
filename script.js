@@ -479,7 +479,7 @@ async function init() {
         
         State.isInitialized = true;
         
-        showToast('Welcome to Divine 3D Gallery! All downloads auto-secured.', 'success');
+        showToast('Welcome to Divine 3D Gallery', '');
         
     } catch (error) {
         console.error('Initialization error:', error);
@@ -2026,4 +2026,5 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
+
 
