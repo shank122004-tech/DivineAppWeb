@@ -566,7 +566,7 @@ async function importFromGitHub() {
         
         State.models = processedModels.filter(model => model.glbUrl);
         
-        showToast(`Imported ${State.models.length} models from GitHub`, 'success');
+        
         
     } catch (error) {
         console.error('GitHub import error:', error);
@@ -2026,3 +2026,4 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
+
