@@ -1,4 +1,4 @@
-// script.js - Divine 3D Gallery + APK Download - Complete with All Features
+// script.js - Divine 3D Gallery + APK Download - Complete with GLB Thumbnails
 'use strict';
 
 // Configuration
@@ -550,7 +550,7 @@ async function importFromGitHub() {
                     category: model.category || State.githubConfig.defaultCategory || 'Spiritual',
                     tags: Array.isArray(model.tags) ? model.tags : [],
                     glbUrl: model.glbUrl,
-                    thumbnailUrl: model.thumbnailUrl || getDefaultThumbnail(model.category),
+                    thumbnailUrl: model.thumbnailUrl || '',
                     fileSize: model.fileSize || await getFileSize(model.glbUrl),
                     createdAt: model.createdAt || new Date().toISOString(),
                     updatedAt: model.updatedAt || new Date().toISOString(),
@@ -630,7 +630,7 @@ async function scanGitHubRepository(repo, path) {
                 category: State.githubConfig.defaultCategory || 'Spiritual',
                 tags: [],
                 glbUrl: rawUrl,
-                thumbnailUrl: getDefaultThumbnail(State.githubConfig.defaultCategory || 'Spiritual'),
+                thumbnailUrl: '',
                 fileSize: formatFileSize(file.size),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -706,17 +706,6 @@ function extractNameFromUrl(url) {
     }
 }
 
-function getDefaultThumbnail(category) {
-    const thumbnails = {
-        'Spiritual': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
-        'Temple': 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
-        'Deity': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
-        'Symbol': 'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&h=300&fit=crop'
-    };
-    
-    return thumbnails[category] || thumbnails.Spiritual;
-}
-
 function loadSampleModels() {
     State.models = [
         {
@@ -726,7 +715,7 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['krishna', 'divine', 'statue', 'hindu'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: getDefaultThumbnail('Spiritual'),
+            thumbnailUrl: '',
             fileSize: '4.5 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -741,7 +730,7 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['buddha', 'meditation', 'peace', 'statue'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: getDefaultThumbnail('Spiritual'),
+            thumbnailUrl: '',
             fileSize: '3.2 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -1064,30 +1053,47 @@ function renderModels() {
     Elements.galleryContainer.appendChild(container);
 }
 
+// ============================================
+// GLB THUMBNAIL CREATION - UPDATED FUNCTION
+// ============================================
+
 function createModelCard(model, index) {
     const card = document.createElement('div');
     card.className = 'model-card';
     card.style.animationDelay = `${index * 0.1}s`;
     
-    let thumbnailHTML = '';
-    if (model.thumbnailUrl) {
-        thumbnailHTML = `
-            <img src="${model.thumbnailUrl}" 
-                 alt="${model.name}" 
-                 loading="lazy"
-                 onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\"thumbnail-placeholder\">🎨</div>'">
-        `;
-    } else {
-        thumbnailHTML = '<div class="thumbnail-placeholder">🎨</div>';
-    }
-    
-    card.innerHTML = `
+    // Create GLB thumbnail container
+    const thumbnailHTML = `
         <div class="model-thumbnail">
-            ${thumbnailHTML}
+            <div class="glb-thumbnail-container">
+                <model-viewer
+                    class="glb-thumbnail-viewer"
+                    src="${model.glbUrl}"
+                    alt="${model.name}"
+                    camera-controls
+                    camera-orbit="0deg 75deg 100%"
+                    field-of-view="30deg"
+                    exposure="1"
+                    shadow-intensity="1"
+                    interaction-prompt="none"
+                    disable-zoom
+                    disable-pan
+                    disable-tap
+                    auto-rotate
+                    auto-rotate-delay="0"
+                    style="width: 100%; height: 100%;"
+                >
+                    <div slot="progress-bar" style="display: none;"></div>
+                </model-viewer>
+            </div>
             <span class="model-badge">${model.category}</span>
             ${model.secure ? '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Secured</span>' : 
               '<span class="model-badge" style="left: auto; right: 1rem; background: var(--warning);">⚠️ Auto-Secure</span>'}
         </div>
+    `;
+    
+    card.innerHTML = `
+        ${thumbnailHTML}
         <div class="model-content">
             <div class="model-header">
                 <h4 class="model-title">${model.name}</h4>
@@ -1124,6 +1130,20 @@ function createModelCard(model, index) {
     };
     
     card.onclick = () => openPreview(model);
+    
+    // Initialize the model-viewer after adding to DOM
+    setTimeout(() => {
+        const viewer = card.querySelector('.glb-thumbnail-viewer');
+        if (viewer) {
+            viewer.addEventListener('error', (e) => {
+                console.warn('Thumbnail GLB load error:', e);
+                const container = card.querySelector('.glb-thumbnail-container');
+                if (container) {
+                    container.innerHTML = '<div class="thumbnail-placeholder">🎨</div>';
+                }
+            });
+        }
+    }, 100);
     
     return card;
 }
@@ -1308,11 +1328,9 @@ function updateAdminModelList() {
         item.className = 'admin-model-item';
         item.innerHTML = `
             <div class="model-thumb-small">
-                ${model.thumbnailUrl 
-                    ? `<img src="${model.thumbnailUrl}" alt="${model.name}" loading="lazy"
-                         onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\"width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;\">🎨</div>'">`
-                    : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;">🎨</div>'
-                }
+                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;">
+                    🎨
+                </div>
             </div>
             <div class="model-info-small">
                 <h6>${model.name}</h6>
