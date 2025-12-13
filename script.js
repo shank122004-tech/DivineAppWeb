@@ -1,16 +1,13 @@
-// script.js - Divine 3D Gallery + APK Download - Complete with GLB Thumbnails
+// script.js - Divine 3D Gallery - Complete with Auto-Signature Injection
 'use strict';
 
 // Configuration
 const CONFIG = {
     DEFAULT_GITHUB_REPO: 'shank122004-tech/DivineAppWeb',
     DEFAULT_MODELS_PATH: 'models',
+    ADMIN_PASSWORD: 'admin123',
     LOCAL_STORAGE_KEY: 'divine3d_gallery_data',
     CACHE_DURATION: 15 * 60 * 1000, // 15 minutes
-    
-    // SECURITY: Password moved to GitHub Gist
-    SECURITY_GIST_ID: '6802f00f32fdb0aec7ec3e6680a3b60b044940ff513d6e128b58dad56350206b',
-    SECURITY_GIST_FILE: 'admin-config.json',
     
     // GLB Security Configuration
     GLB_SECURITY: {
@@ -19,7 +16,21 @@ const CONFIG = {
         GLB_MAGIC: 0x46546C67, // "glTF"
         CHUNK_TYPE_JSON: 0x4E4F534A, // "JSON"
         CHUNK_TYPE_BIN: 0x004E4942  // "BIN"
+    },
+    
+    // App Download Links
+    APP_DOWNLOAD_LINKS: {
+        PLAY_STORE: "https://play.google.com/store/apps/details?id=com.divine3d",
+        APP_STORE: "https://apps.apple.com/app/divine-3d/id123456789",
+        DIRECT_APK: "https://divine3d.app/download/app.apk"
     }
+};
+
+// GitHub API Configuration
+CONFIG.GITHUB_API = {
+    BASE_URL: 'https://api.github.com',
+    RAW_CONTENT_URL: 'https://raw.githubusercontent.com',
+    TOKEN: null
 };
 
 // State Management
@@ -41,22 +52,23 @@ const State = {
         repo: CONFIG.DEFAULT_GITHUB_REPO,
         path: CONFIG.DEFAULT_MODELS_PATH,
         jsonUrl: '',
-        autoRefresh: '15'
+        autoRefresh: '15',
+        defaultCategory: 'Spiritual'
     },
     autoSecureDownloads: true,
-    autoInjectSignature: true
+    autoInjectSignature: true,
+    appSettings: {
+        version: '2.0.1',
+        playStoreLink: CONFIG.APP_DOWNLOAD_LINKS.PLAY_STORE,
+        appStoreLink: CONFIG.APP_DOWNLOAD_LINKS.APP_STORE,
+        apkDownloadLink: CONFIG.APP_DOWNLOAD_LINKS.DIRECT_APK
+    }
 };
 
 // DOM Elements
 const Elements = {
     loadingScreen: document.getElementById('loadingScreen'),
     themeToggle: document.getElementById('themeToggle'),
-    apkDownloadBtn: document.getElementById('apkDownloadBtn'),
-    apkModal: document.getElementById('apkModal'),
-    closeApkModal: document.getElementById('closeApkModal'),
-    openApkModalBtn: document.getElementById('openApkModalBtn'),
-    apkDownloadLink: document.getElementById('apkDownloadLink'),
-    apkSize: document.getElementById('apkSize'),
     adminBtn: document.getElementById('adminBtn'),
     adminOverlay: document.getElementById('adminOverlay'),
     refreshBtn: document.getElementById('refreshBtn'),
@@ -120,94 +132,20 @@ const Elements = {
     autoSignature: document.getElementById('autoSignature'),
     resetSecurity: document.getElementById('resetSecurity'),
     backupData: document.getElementById('backupData'),
+    appVersion: document.getElementById('appVersion'),
+    playStoreLink: document.getElementById('playStoreLink'),
+    appStoreLink: document.getElementById('appStoreLink'),
+    apkDownloadLink: document.getElementById('apkDownloadLink'),
+    qrCode: document.getElementById('qrCode'),
+    generateQR: document.getElementById('generateQR'),
+    saveAppSettings: document.getElementById('saveAppSettings'),
     toastContainer: document.getElementById('toastContainer'),
     fabScrollTop: document.getElementById('fabScrollTop'),
-    fabImport: document.getElementById('fabImport')
+    fabImport: document.getElementById('fabImport'),
+    fabAppDownload: document.getElementById('fabAppDownload'),
+    downloadAppBtn: document.getElementById('downloadAppBtn'),
+    heroDownloadAppBtn: document.getElementById('heroDownloadAppBtn')
 };
-
-// ============================================
-// SECURE PASSWORD VERIFICATION SYSTEM
-// ============================================
-
-class SecureAuth {
-    constructor() {
-        this.gistId = CONFIG.SECURITY_GIST_ID;
-        this.gistFile = CONFIG.SECURITY_GIST_FILE;
-        this.cache = null;
-        this.cacheTime = null;
-    }
-
-    async verifyPassword(password) {
-        try {
-            // Hash the entered password
-            const inputHash = await this.sha256(password);
-            
-            // Get the correct hash from GitHub Gist
-            const correctHash = await this.getPasswordHash();
-            
-            // Compare hashes
-            if (inputHash === correctHash) {
-                return { success: true };
-            } else {
-                return { 
-                    success: false, 
-                    error: 'Incorrect password' 
-                };
-            }
-        } catch (error) {
-            console.error('Authentication error:', error);
-            return { 
-                success: false, 
-                error: 'Authentication failed. Please try again.' 
-            };
-        }
-    }
-
-    async getPasswordHash() {
-        // Check cache first (cache for 5 minutes)
-        if (this.cache && this.cacheTime && 
-            Date.now() - this.cacheTime < 5 * 60 * 1000) {
-            return this.cache;
-        }
-
-        try {
-            const response = await fetch(`https://api.github.com/gists/${this.gistId}`);
-            
-            if (!response.ok) {
-                throw new Error(`GitHub API error: ${response.status}`);
-            }
-            
-            const gistData = await response.json();
-            const config = JSON.parse(gistData.files[this.gistFile].content);
-            
-            // Cache the result
-            this.cache = config.passwordHash;
-            this.cacheTime = Date.now();
-            
-            return config.passwordHash;
-        } catch (error) {
-            console.error('Failed to fetch password hash:', error);
-            
-            // Fallback for development/offline
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                return 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3'; // Hash of "Shashank@122004"
-            }
-            
-            throw error;
-        }
-    }
-
-    async sha256(message) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return hashHex;
-    }
-}
-
-// Create global secure auth instance
-const secureAuth = new SecureAuth();
 
 // ============================================
 // GLB SIGNATURE INJECTION SYSTEM
@@ -394,62 +332,6 @@ class GLBSignatureInjector {
 const signatureInjector = new GLBSignatureInjector();
 
 // ============================================
-// APK DOWNLOAD FUNCTIONS
-// ============================================
-
-async function getAPKFileSize() {
-    try {
-        const apkUrl = 'docs/app-debug.apk';
-        const response = await fetch(apkUrl, { method: 'HEAD' });
-        
-        if (response.ok) {
-            const size = response.headers.get('content-length');
-            if (size) {
-                const bytes = parseInt(size, 10);
-                const kb = Math.round((bytes / 1024) * 10) / 10;
-                const mb = Math.round((bytes / (1024 * 1024)) * 100) / 100;
-                
-                if (Elements.apkSize) {
-                    Elements.apkSize.textContent = mb > 1 ? 
-                        `${mb} MB` : `${kb} KB`;
-                }
-                
-                return {
-                    bytes: bytes,
-                    kb: kb,
-                    mb: mb,
-                    formatted: mb > 1 ? `${mb} MB` : `${kb} KB`
-                };
-            }
-        }
-    } catch (error) {
-        console.warn('Failed to get APK file size:', error);
-    }
-    
-    if (Elements.apkSize) {
-        Elements.apkSize.textContent = 'Size: Unknown';
-    }
-    return null;
-}
-
-function openApkModal() {
-    if (Elements.apkModal) {
-        Elements.apkModal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        
-        // Update APK size if needed
-        getAPKFileSize();
-    }
-}
-
-function closeApkModal() {
-    if (Elements.apkModal) {
-        Elements.apkModal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-}
-
-// ============================================
 // INITIALIZATION
 // ============================================
 
@@ -463,9 +345,6 @@ async function init() {
         // Load saved data
         loadSavedData();
         
-        // Get APK file size
-        getAPKFileSize();
-        
         // Load initial data
         await loadModels();
         
@@ -477,9 +356,15 @@ async function init() {
         // Check admin status
         checkAdminStatus();
         
+        // Setup auto-refresh if enabled
+        setupAutoRefresh();
+        
+        // Setup FAB visibility
+        setupFABVisibility();
+        
         State.isInitialized = true;
         
-        showToast('Welcome to Divine 3D Gallery', '');
+        showToast('Welcome to Divine 3D Gallery! All downloads auto-secured.', 'success');
         
     } catch (error) {
         console.error('Initialization error:', error);
@@ -550,7 +435,7 @@ async function importFromGitHub() {
                     category: model.category || State.githubConfig.defaultCategory || 'Spiritual',
                     tags: Array.isArray(model.tags) ? model.tags : [],
                     glbUrl: model.glbUrl,
-                    thumbnailUrl: model.thumbnailUrl || '',
+                    thumbnailUrl: model.thumbnailUrl || getDefaultThumbnail(model.category),
                     fileSize: model.fileSize || await getFileSize(model.glbUrl),
                     createdAt: model.createdAt || new Date().toISOString(),
                     updatedAt: model.updatedAt || new Date().toISOString(),
@@ -566,7 +451,7 @@ async function importFromGitHub() {
         
         State.models = processedModels.filter(model => model.glbUrl);
         
-        
+        showToast(`Imported ${State.models.length} models from GitHub`, 'success');
         
     } catch (error) {
         console.error('GitHub import error:', error);
@@ -604,8 +489,16 @@ async function scanGitHubRepository(repo, path) {
     try {
         const [owner, repoName] = repo.split('/');
         
-        const apiUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/${path}`;
+        if (!owner || !repoName) {
+            throw new Error('Invalid repository format. Use: username/repository-name');
+        }
+        
+        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}/contents/${path}`;
         const headers = {};
+        
+        if (CONFIG.GITHUB_API.TOKEN) {
+            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
+        }
         
         const response = await fetch(apiUrl, { headers });
         
@@ -615,13 +508,17 @@ async function scanGitHubRepository(repo, path) {
         
         const contents = await response.json();
         
+        if (!Array.isArray(contents)) {
+            throw new Error('GitHub API returned invalid data');
+        }
+        
         const glbFiles = contents.filter(item => 
             item.type === 'file' && 
             item.name.toLowerCase().endsWith('.glb')
         );
         
         const models = glbFiles.map(file => {
-            const rawUrl = `https://raw.githubusercontent.com/${repo}/main/${path}/${file.name}`;
+            const rawUrl = `${CONFIG.GITHUB_API.RAW_CONTENT_URL}/${repo}/main/${path}/${file.name}`;
             
             return {
                 id: `github_${file.sha}`,
@@ -630,7 +527,7 @@ async function scanGitHubRepository(repo, path) {
                 category: State.githubConfig.defaultCategory || 'Spiritual',
                 tags: [],
                 glbUrl: rawUrl,
-                thumbnailUrl: '',
+                thumbnailUrl: 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
                 fileSize: formatFileSize(file.size),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -706,6 +603,17 @@ function extractNameFromUrl(url) {
     }
 }
 
+function getDefaultThumbnail(category) {
+    const thumbnails = {
+        'Spiritual': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
+        'Temple': 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
+        'Deity': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+        'Symbol': 'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&h=300&fit=crop'
+    };
+    
+    return thumbnails[category] || thumbnails.Spiritual;
+}
+
 function loadSampleModels() {
     State.models = [
         {
@@ -715,12 +623,12 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['krishna', 'divine', 'statue', 'hindu'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: '',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
             fileSize: '4.5 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             downloads: 1250,
-            secure: false,
+            secure: true,
             source: 'sample'
         },
         {
@@ -730,12 +638,27 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['buddha', 'meditation', 'peace', 'statue'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: '',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
             fileSize: '3.2 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             downloads: 980,
-            secure: false,
+            secure: true,
+            source: 'sample'
+        },
+        {
+            id: 'sample_3',
+            name: 'Ancient Temple',
+            description: 'Detailed 3D model of ancient Hindu temple',
+            category: 'Temple',
+            tags: ['temple', 'architecture', 'ancient', 'hindu'],
+            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
+            fileSize: '6.8 MB',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            downloads: 750,
+            secure: true,
             source: 'sample'
         }
     ];
@@ -761,6 +684,7 @@ function loadFromLocalStorage() {
                 State.githubConfig = data.githubConfig || State.githubConfig;
                 State.autoSecureDownloads = data.autoSecureDownloads !== false;
                 State.autoInjectSignature = data.autoInjectSignature !== false;
+                State.appSettings = data.appSettings || State.appSettings;
                 
                 if (State.isAdmin) {
                     showAdminDashboard();
@@ -792,6 +716,7 @@ function saveToLocalStorage() {
             githubConfig: State.githubConfig,
             autoSecureDownloads: State.autoSecureDownloads,
             autoInjectSignature: State.autoInjectSignature,
+            appSettings: State.appSettings,
             timestamp: new Date().toISOString()
         };
         localStorage.setItem(CONFIG.LOCAL_STORAGE_KEY, JSON.stringify(data));
@@ -813,11 +738,24 @@ function loadSavedData() {
             State.githubConfig = { ...State.githubConfig, ...JSON.parse(savedConfig) };
         }
         
+        const savedAppSettings = localStorage.getItem('app_settings');
+        if (savedAppSettings) {
+            State.appSettings = { ...State.appSettings, ...JSON.parse(savedAppSettings) };
+        }
+        
         if (Elements.githubRepo) {
             Elements.githubRepo.value = State.githubConfig.repo;
             Elements.modelsPath.value = State.githubConfig.path;
             Elements.jsonUrl.value = State.githubConfig.jsonUrl;
             Elements.autoRefresh.value = State.githubConfig.autoRefresh;
+            Elements.defaultCategory.value = State.githubConfig.defaultCategory;
+        }
+        
+        if (Elements.appVersion) {
+            Elements.appVersion.value = State.appSettings.version;
+            Elements.playStoreLink.value = State.appSettings.playStoreLink;
+            Elements.appStoreLink.value = State.appSettings.appStoreLink;
+            Elements.apkDownloadLink.value = State.appSettings.apkDownloadLink;
         }
         
     } catch (error) {
@@ -841,6 +779,24 @@ function saveGitHubConfig() {
     } catch (error) {
         console.error('Error saving GitHub config:', error);
         showToast('Failed to save configuration', 'error');
+    }
+}
+
+function saveAppSettings() {
+    try {
+        State.appSettings = {
+            version: Elements.appVersion.value.trim(),
+            playStoreLink: Elements.playStoreLink.value.trim(),
+            appStoreLink: Elements.appStoreLink.value.trim(),
+            apkDownloadLink: Elements.apkDownloadLink.value.trim()
+        };
+        
+        localStorage.setItem('app_settings', JSON.stringify(State.appSettings));
+        showToast('App settings saved', 'success');
+        
+    } catch (error) {
+        console.error('Error saving app settings:', error);
+        showToast('Failed to save app settings', 'error');
     }
 }
 
@@ -955,6 +911,148 @@ async function downloadModel(model) {
 }
 
 // ============================================
+// APP DOWNLOAD FUNCTIONS
+// ============================================
+
+function downloadApp() {
+    // Show app download modal or redirect
+    showAppDownloadModal();
+}
+
+function showAppDownloadModal() {
+    // Create modal for app download options
+    const modalHTML = `
+        <div class="modal-overlay active">
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header">
+                    <div class="modal-title-section">
+                        <h3 class="modal-title">Download Divine 3D App</h3>
+                        <div class="modal-subtitle">Available on all platforms</div>
+                    </div>
+                    <button class="modal-close" onclick="closeModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="app-download-options">
+                        <div class="app-download-option">
+                            <i class="fab fa-android"></i>
+                            <div class="option-content">
+                                <h4>Android App</h4>
+                                <p>Download APK directly or from Google Play</p>
+                                <div class="option-buttons">
+                                    <button class="action-btn" onclick="downloadAPK()">
+                                        <i class="fas fa-download"></i> Download APK
+                                    </button>
+                                    <button class="action-btn" onclick="openPlayStore()">
+                                        <i class="fab fa-google-play"></i> Google Play
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-download-option">
+                            <i class="fab fa-apple"></i>
+                            <div class="option-content">
+                                <h4>iOS App</h4>
+                                <p>Available on the App Store</p>
+                                <button class="action-btn" onclick="openAppStore()">
+                                    <i class="fab fa-app-store-ios"></i> App Store
+                                </button>
+                            </div>
+                        </div>
+                        <div class="qr-code-section">
+                            <h4>Scan to Download</h4>
+                            <div class="qr-code-placeholder">
+                                <i class="fas fa-qrcode"></i>
+                                <p>Scan this QR code with your phone</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = modalHTML;
+    document.body.appendChild(modalContainer);
+    
+    // Add CSS for modal
+    const style = document.createElement('style');
+    style.textContent = `
+        .app-download-options {
+            padding: var(--spacing-xl);
+        }
+        .app-download-option {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            padding: var(--spacing-lg);
+            background: var(--glass-bg);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--glass-border);
+        }
+        .app-download-option i {
+            font-size: 2.5rem;
+            color: var(--accent-purple);
+        }
+        .option-content {
+            flex: 1;
+        }
+        .option-content h4 {
+            margin-bottom: var(--spacing-xs);
+        }
+        .option-content p {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        .option-buttons {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+        .qr-code-section {
+            text-align: center;
+            padding: var(--spacing-xl);
+            background: var(--tertiary-bg);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--card-border);
+        }
+        .qr-code-placeholder {
+            margin-top: var(--spacing-lg);
+        }
+        .qr-code-placeholder i {
+            font-size: 4rem;
+            color: var(--text-dim);
+            margin-bottom: var(--spacing-md);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function closeModal() {
+    const modal = document.querySelector('.modal-overlay.active');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function downloadAPK() {
+    window.open(State.appSettings.apkDownloadLink, '_blank');
+    showToast('APK download started', 'success');
+}
+
+function openPlayStore() {
+    window.open(State.appSettings.playStoreLink, '_blank');
+    showToast('Opening Google Play Store...', 'info');
+}
+
+function openAppStore() {
+    window.open(State.appSettings.appStoreLink, '_blank');
+    showToast('Opening App Store...', 'info');
+}
+
+// ============================================
 // UI UPDATE FUNCTIONS
 // ============================================
 
@@ -1053,47 +1151,29 @@ function renderModels() {
     Elements.galleryContainer.appendChild(container);
 }
 
-// ============================================
-// GLB THUMBNAIL CREATION - UPDATED FUNCTION
-// ============================================
-
 function createModelCard(model, index) {
     const card = document.createElement('div');
     card.className = 'model-card';
     card.style.animationDelay = `${index * 0.1}s`;
     
-    // Create GLB thumbnail container
-    const thumbnailHTML = `
+    let thumbnailHTML = '';
+    if (model.thumbnailUrl) {
+        thumbnailHTML = `
+            <img src="${model.thumbnailUrl}" 
+                 alt="${model.name}" 
+                 loading="lazy"
+                 onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\"thumbnail-placeholder\">🎨</div>'">`;
+    } else {
+        thumbnailHTML = '<div class="thumbnail-placeholder">🎨</div>';
+    }
+    
+    card.innerHTML = `
         <div class="model-thumbnail">
-            <div class="glb-thumbnail-container">
-                <model-viewer
-                    class="glb-thumbnail-viewer"
-                    src="${model.glbUrl}"
-                    alt="${model.name}"
-                    camera-controls
-                    camera-orbit="0deg 75deg 100%"
-                    field-of-view="30deg"
-                    exposure="1"
-                    shadow-intensity="1"
-                    interaction-prompt="none"
-                    disable-zoom
-                    disable-pan
-                    disable-tap
-                    auto-rotate
-                    auto-rotate-delay="0"
-                    style="width: 100%; height: 100%;"
-                >
-                    <div slot="progress-bar" style="display: none;"></div>
-                </model-viewer>
-            </div>
+            ${thumbnailHTML}
             <span class="model-badge">${model.category}</span>
             ${model.secure ? '<span class="model-badge" style="left: auto; right: 1rem; background: var(--success);">🔒 Secured</span>' : 
               '<span class="model-badge" style="left: auto; right: 1rem; background: var(--warning);">⚠️ Auto-Secure</span>'}
         </div>
-    `;
-    
-    card.innerHTML = `
-        ${thumbnailHTML}
         <div class="model-content">
             <div class="model-header">
                 <h4 class="model-title">${model.name}</h4>
@@ -1130,20 +1210,6 @@ function createModelCard(model, index) {
     };
     
     card.onclick = () => openPreview(model);
-    
-    // Initialize the model-viewer after adding to DOM
-    setTimeout(() => {
-        const viewer = card.querySelector('.glb-thumbnail-viewer');
-        if (viewer) {
-            viewer.addEventListener('error', (e) => {
-                console.warn('Thumbnail GLB load error:', e);
-                const container = card.querySelector('.glb-thumbnail-container');
-                if (container) {
-                    container.innerHTML = '<div class="thumbnail-placeholder">🎨</div>';
-                }
-            });
-        }
-    }, 100);
     
     return card;
 }
@@ -1328,9 +1394,11 @@ function updateAdminModelList() {
         item.className = 'admin-model-item';
         item.innerHTML = `
             <div class="model-thumb-small">
-                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;">
-                    🎨
-                </div>
+                ${model.thumbnailUrl 
+                    ? `<img src="${model.thumbnailUrl}" alt="${model.name}" loading="lazy"
+                         onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\"width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;\">🎨</div>'">`
+                    : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;">🎨</div>'
+                }
             </div>
             <div class="model-info-small">
                 <h6>${model.name}</h6>
@@ -1387,8 +1455,12 @@ async function testGitHubConnection() {
             throw new Error('Invalid repository format. Use: username/repository-name');
         }
         
-        const apiUrl = `https://api.github.com/repos/${owner}/${repoName}`;
+        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}`;
         const headers = {};
+        
+        if (CONFIG.GITHUB_API.TOKEN) {
+            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
+        }
         
         const response = await fetch(apiUrl, { headers });
         
@@ -1625,6 +1697,42 @@ function updateAdminStatus(message, type = 'ready') {
     }
 }
 
+function setupAutoRefresh() {
+    if (State.refreshInterval) {
+        clearInterval(State.refreshInterval);
+    }
+    
+    const minutes = parseInt(State.githubConfig.autoRefresh);
+    if (minutes > 0) {
+        State.refreshInterval = setInterval(() => {
+            loadModels();
+            showToast('Auto-refresh completed', 'info');
+        }, minutes * 60 * 1000);
+    }
+}
+
+function setupFABVisibility() {
+    window.addEventListener('scroll', () => {
+        if (Elements.fabScrollTop) {
+            if (window.scrollY > 500) {
+                Elements.fabScrollTop.classList.add('visible');
+                Elements.fabAppDownload.classList.add('visible');
+            } else {
+                Elements.fabScrollTop.classList.remove('visible');
+                Elements.fabAppDownload.classList.remove('visible');
+            }
+        }
+    });
+}
+
+function generateQRCode() {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href)}`;
+    if (Elements.qrCode) {
+        Elements.qrCode.value = qrUrl;
+        showToast('QR Code URL generated', 'success');
+    }
+}
+
 // ============================================
 // EVENT LISTENERS SETUP
 // ============================================
@@ -1648,14 +1756,6 @@ function setupEventListeners() {
                 Elements.mainHeader.classList.remove('scrolled');
             }
         }
-        
-        if (Elements.fabScrollTop) {
-            if (window.scrollY > 500) {
-                Elements.fabScrollTop.classList.add('visible');
-            } else {
-                Elements.fabScrollTop.classList.remove('visible');
-            }
-        }
     });
     
     // Navigation
@@ -1669,18 +1769,6 @@ function setupEventListeners() {
                 Elements.navLinks.classList.remove('active');
             }
         });
-    }
-    
-    // APK Download
-    if (Elements.apkDownloadBtn) Elements.apkDownloadBtn.onclick = openApkModal;
-    if (Elements.openApkModalBtn) Elements.openApkModalBtn.onclick = openApkModal;
-    if (Elements.closeApkModal) Elements.closeApkModal.onclick = closeApkModal;
-    if (Elements.apkModal) {
-        Elements.apkModal.onclick = (e) => {
-            if (e.target === Elements.apkModal) {
-                closeApkModal();
-            }
-        };
     }
     
     // Search
@@ -1741,36 +1829,23 @@ function setupEventListeners() {
         };
     }
     
-    // Admin - SECURE LOGIN
+    // App download buttons
+    if (Elements.downloadAppBtn) Elements.downloadAppBtn.onclick = downloadApp;
+    if (Elements.heroDownloadAppBtn) Elements.heroDownloadAppBtn.onclick = downloadApp;
+    if (Elements.fabAppDownload) Elements.fabAppDownload.onclick = downloadApp;
+    
+    // Admin
+    if (Elements.adminBtn) Elements.adminBtn.onclick = openAdminPanel;
+    if (Elements.closeAdmin) Elements.closeAdmin.onclick = closeAdminPanel;
+    if (Elements.fabImport) Elements.fabImport.onclick = openAdminPanel;
+    
     if (Elements.loginBtn && Elements.adminPassword) {
-        Elements.loginBtn.onclick = async () => {
-            const password = Elements.adminPassword.value;
-            
-            if (!password) {
-                showToast('Please enter password', 'error');
-                return;
-            }
-            
-            // Show loading state
-            Elements.loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
-            Elements.loginBtn.disabled = true;
-            
-            try {
-                // Use secure authentication
-                const result = await secureAuth.verifyPassword(password);
-                
-                if (result.success) {
-                    showAdminDashboard();
-                    showToast('Admin panel unlocked!', 'success');
-                } else {
-                    showToast(result.error || 'Incorrect password', 'error');
-                }
-            } catch (error) {
-                showToast('Authentication failed. Please try again.', 'error');
-            } finally {
-                // Reset button state
-                Elements.loginBtn.innerHTML = '<i class="fas fa-unlock"></i> Unlock Panel';
-                Elements.loginBtn.disabled = false;
+        Elements.loginBtn.onclick = () => {
+            if (Elements.adminPassword.value === CONFIG.ADMIN_PASSWORD) {
+                showAdminDashboard();
+                showToast('Admin panel unlocked!', 'success');
+            } else {
+                showToast('Incorrect password', 'error');
             }
         };
     }
@@ -1781,10 +1856,6 @@ function setupEventListeners() {
             showToast('Logged out from admin panel', 'info');
         };
     }
-    
-    if (Elements.adminBtn) Elements.adminBtn.onclick = openAdminPanel;
-    if (Elements.closeAdmin) Elements.closeAdmin.onclick = closeAdminPanel;
-    if (Elements.fabImport) Elements.fabImport.onclick = openAdminPanel;
     
     // Admin tabs
     if (Elements.tabBtns && Elements.tabPanes) {
@@ -1857,6 +1928,10 @@ function setupEventListeners() {
         };
     }
     
+    // App Settings
+    if (Elements.generateQR) Elements.generateQR.onclick = generateQRCode;
+    if (Elements.saveAppSettings) Elements.saveAppSettings.onclick = saveAppSettings;
+    
     // Preview modal
     if (Elements.closePreview) Elements.closePreview.onclick = closePreview;
     if (Elements.previewModal) {
@@ -1875,8 +1950,43 @@ function setupEventListeners() {
         };
     }
     
-    if (Elements.copyUrl) Elements.copyUrl.onclick = copyModelUrl;
-    if (Elements.shareModel) Elements.shareModel.onclick = shareModel;
+    if (Elements.copyUrl) {
+        Elements.copyUrl.onclick = async () => {
+            if (!State.currentPreviewModel) return;
+            
+            try {
+                await navigator.clipboard.writeText(State.currentPreviewModel.glbUrl);
+                showToast('Model URL copied to clipboard!', 'success');
+            } catch (error) {
+                console.error('Copy error:', error);
+                showToast('Failed to copy URL', 'error');
+            }
+        };
+    }
+    
+    if (Elements.shareModel) {
+        Elements.shareModel.onclick = async () => {
+            if (!State.currentPreviewModel) return;
+            
+            try {
+                if (navigator.share) {
+                    await navigator.share({
+                        title: State.currentPreviewModel.name,
+                        text: State.currentPreviewModel.description,
+                        url: window.location.href
+                    });
+                } else {
+                    await navigator.clipboard.writeText(window.location.href);
+                    showToast('Link copied to clipboard!', 'success');
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Share error:', error);
+                    showToast('Failed to share', 'error');
+                }
+            }
+        };
+    }
     
     if (Elements.rotateToggle) {
         Elements.rotateToggle.onclick = () => {
@@ -1904,6 +2014,9 @@ function setupEventListeners() {
         };
     }
     
+    // Scroll to top
+    if (Elements.fabScrollTop) Elements.fabScrollTop.onclick = scrollToTop;
+    
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -1913,9 +2026,7 @@ function setupEventListeners() {
             if (Elements.adminOverlay && Elements.adminOverlay.classList.contains('active')) {
                 closeAdminPanel();
             }
-            if (Elements.apkModal && Elements.apkModal.classList.contains('active')) {
-                closeApkModal();
-            }
+            closeModal();
         }
         
         if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -1926,11 +2037,6 @@ function setupEventListeners() {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
             openAdminPanel();
-        }
-        
-        if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-            e.preventDefault();
-            openApkModal();
         }
     });
     
@@ -1959,40 +2065,11 @@ function setupEventListeners() {
         }
         lastTouchEnd = now;
     }, { passive: false });
-}
-
-async function copyModelUrl() {
-    if (!State.currentPreviewModel) return;
     
-    try {
-        await navigator.clipboard.writeText(State.currentPreviewModel.glbUrl);
-        showToast('Model URL copied to clipboard!', 'success');
-    } catch (error) {
-        console.error('Copy error:', error);
-        showToast('Failed to copy URL', 'error');
-    }
-}
-
-async function shareModel() {
-    if (!State.currentPreviewModel) return;
-    
-    try {
-        if (navigator.share) {
-            await navigator.share({
-                title: State.currentPreviewModel.name,
-                text: State.currentPreviewModel.description,
-                url: window.location.href + '#preview'
-            });
-        } else {
-            await navigator.clipboard.writeText(window.location.href);
-            showToast('Link copied to clipboard!', 'success');
-        }
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error('Share error:', error);
-            showToast('Failed to share', 'error');
-        }
-    }
+    // Handle window resize for mobile optimization
+    window.addEventListener('resize', () => {
+        renderModels();
+    });
 }
 
 // ============================================
@@ -2008,14 +2085,17 @@ if (document.readyState === 'loading') {
 // Expose key functions to global scope
 window.openPreview = openPreview;
 window.downloadModel = downloadModel;
+window.downloadApp = downloadApp;
 window.openAdminPanel = openAdminPanel;
 window.closeAdminPanel = closeAdminPanel;
-window.openApkModal = openApkModal;
-window.closeApkModal = closeApkModal;
 window.scrollToSection = scrollToSection;
 window.scrollToTop = scrollToTop;
 window.clearFilters = clearFilters;
 window.filterByCategory = filterByCategory;
+window.closeModal = closeModal;
+window.downloadAPK = downloadAPK;
+window.openPlayStore = openPlayStore;
+window.openAppStore = openAppStore;
 
 // Handle online/offline status
 window.addEventListener('online', () => {
@@ -2026,5 +2106,3 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     showToast('You are offline. Using cached models.', 'warning');
 });
-
-
