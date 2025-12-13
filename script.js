@@ -22,7 +22,7 @@ const CONFIG = {
     APP_DOWNLOAD_LINKS: {
         PLAY_STORE: "https://play.google.com/store/apps/details?id=com.divine3d",
         APP_STORE: "https://apps.apple.com/app/divine-3d/id123456789",
-        DIRECT_APK: "https://divine3d.app/download/app.apk"
+        DIRECT_APK: "https://github.com/shank122004-tech/DivineAppWeb/releases/download/v1.0/DivineMantra_v1.apk"
     }
 };
 
@@ -623,7 +623,7 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['krishna', 'divine', 'statue', 'hindu'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
+            thumbnailUrl: '',
             fileSize: '4.5 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -2080,6 +2080,82 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
+}
+// Add this function in the initialization section
+function setupHeroPreview() {
+    if (Elements.heroPreview) {
+        // Set the model URL
+        Elements.heroPreview.src = 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb';
+        
+        // Add error handling
+        Elements.heroPreview.addEventListener('error', (e) => {
+            console.error('Hero preview error:', e);
+            // Fallback to showing a placeholder with icon
+            const heroVisual = document.querySelector('.hero-visual');
+            if (heroVisual) {
+                heroVisual.innerHTML = `
+                    <div class="floating-card">
+                        <div class="card-glow"></div>
+                        <div class="model-placeholder">
+                            <div class="placeholder-icon">🛕</div>
+                            <div class="placeholder-text"></div>
+                            <div class="placeholder-subtext"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        // Add success handler
+        Elements.heroPreview.addEventListener('load', () => {
+            console.log('Hero model loaded successfully');
+            Elements.heroPreview.style.opacity = '1';
+        });
+    }
+}
+
+// Call this function in the init() function after DOM setup
+async function init() {
+    try {
+        showLoading(true);
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Load saved data
+        loadSavedData();
+        
+        // Setup hero preview
+        setupHeroPreview();
+        
+        // Load initial data
+        await loadModels();
+        
+        // Update UI
+        updateStats();
+        populateCategories();
+        renderModels();
+        
+        // Check admin status
+        checkAdminStatus();
+        
+        // Setup auto-refresh if enabled
+        setupAutoRefresh();
+        
+        // Setup FAB visibility
+        setupFABVisibility();
+        
+        State.isInitialized = true;
+        
+        showToast('Welcome to Divine 3D Gallery! All downloads auto-secured.', 'success');
+        
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showToast('Failed to initialize gallery', 'error');
+        loadSampleModels();
+    } finally {
+        showLoading(false);
+    }
 }
 
 // Expose key functions to global scope
