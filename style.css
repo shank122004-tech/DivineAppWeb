@@ -3330,3 +3330,32 @@ input:checked + .toggle-slider:before {
         break-inside: avoid;
     }
 }
+/* Add to CSS file for better model-viewer styling */
+.model-thumbnail model-viewer {
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)) !important;
+}
+
+.model-thumbnail model-viewer::part(default-progress-bar) {
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.model-thumbnail model-viewer::part(default-progress-mask) {
+    background-color: var(--accent-purple);
+}
+
+.model-thumb-small model-viewer {
+    width: 100% !important;
+    height: 100% !important;
+    background: var(--secondary-bg) !important;
+}
+
+/* Ensure model-viewer thumbnails don't have white background */
+model-viewer {
+    --poster-color: transparent !important;
+    --progress-bar-color: var(--accent-purple) !important;
+    --progress-bar-height: 3px !important;
+    --progress-mask-color: rgba(255, 255, 255, 0.2) !important;
+}
