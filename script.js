@@ -332,6 +332,117 @@ class GLBSignatureInjector {
 const signatureInjector = new GLBSignatureInjector();
 
 // ============================================
+// NEW FUNCTION: GET ALL GLB FILES FROM GITHUB
+// ============================================
+
+async function getAllGLBFilesFromGitHub() {
+    try {
+        const { repo, path } = State.githubConfig;
+        const [owner, repoName] = repo.split('/');
+        
+        if (!owner || !repoName) {
+            throw new Error('Invalid repository format. Use: username/repository-name');
+        }
+        
+        // Get the tree structure of the models directory
+        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}/git/trees/main?recursive=1`;
+        const headers = {};
+        
+        if (CONFIG.GITHUB_API.TOKEN) {
+            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
+        }
+        
+        const response = await fetch(apiUrl, { headers });
+        
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+        
+        const treeData = await response.json();
+        
+        if (!treeData.tree) {
+            throw new Error('No tree data found');
+        }
+        
+        // Filter for GLB files in the models directory
+        const glbFiles = treeData.tree.filter(item => 
+            item.type === 'blob' && 
+            item.path.toLowerCase().includes('models/') &&
+            item.path.toLowerCase().endsWith('.glb')
+        );
+        
+        console.log(`Found ${glbFiles.length} GLB files in repository`);
+        
+        const models = [];
+        
+        for (const file of glbFiles) {
+            const rawUrl = `${CONFIG.GITHUB_API.RAW_CONTENT_URL}/${repo}/main/${file.path}`;
+            const fileName = file.path.split('/').pop();
+            const category = extractCategoryFromPath(file.path);
+            
+            models.push({
+                id: `github_${file.sha}`,
+                name: extractNameFromFilename(fileName),
+                description: getModelDescription(fileName),
+                category: category || State.githubConfig.defaultCategory || 'Spiritual',
+                tags: extractTagsFromFilename(fileName),
+                glbUrl: rawUrl,
+                thumbnailUrl: rawUrl, // Use GLB URL as thumbnail for model-viewer
+                fileSize: formatFileSize(file.size),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                downloads: 0,
+                secure: fileName.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE),
+                source: 'github',
+                rating: 0
+            });
+        }
+        
+        return models;
+        
+    } catch (error) {
+        console.error('Error fetching GLB files from GitHub:', error);
+        throw error;
+    }
+}
+
+function extractCategoryFromPath(filePath) {
+    // Extract category from path structure
+    const pathParts = filePath.split('/');
+    if (pathParts.length > 2) {
+        return pathParts[1].charAt(0).toUpperCase() + pathParts[1].slice(1);
+    }
+    return null;
+}
+
+function getModelDescription(filename) {
+    const name = extractNameFromFilename(filename);
+    return `Sacred 3D model of ${name}. This model is ready for spiritual visualization and meditation.`;
+}
+
+function extractTagsFromFilename(filename) {
+    const name = extractNameFromFilename(filename).toLowerCase();
+    const tags = [];
+    
+    // Common spiritual terms
+    const spiritualTerms = ['krishna', 'shiva', 'vishnu', 'goddess', 'temple', 'mandir', 'statue', 'idol', 'deity', 'divine', 'holy', 'sacred', 'spiritual', 'religious'];
+    
+    spiritualTerms.forEach(term => {
+        if (name.includes(term)) {
+            tags.push(term);
+        }
+    });
+    
+    // Add category-based tags
+    if (name.includes('hanuman')) tags.push('hanuman', 'monkey god');
+    if (name.includes('ganesha') || name.includes('ganesh')) tags.push('ganesha', 'elephant god', 'remover of obstacles');
+    if (name.includes('buddha')) tags.push('buddha', 'buddhist', 'meditation');
+    if (name.includes('shiva') || name.includes('shiv')) tags.push('shiva', 'destroyer', 'meditation');
+    
+    return tags.length > 0 ? tags : ['sacred', '3d model', 'spiritual'];
+}
+
+// ============================================
 // INITIALIZATION
 // ============================================
 
@@ -345,8 +456,11 @@ async function init() {
         // Load saved data
         loadSavedData();
         
-        // Load initial data
-        await loadModels();
+        // Setup hero preview
+        setupHeroPreview();
+        
+        // Load all models from GitHub
+        await loadAllModelsFromGitHub();
         
         // Update UI
         updateStats();
@@ -364,11 +478,11 @@ async function init() {
         
         State.isInitialized = true;
         
-        showToast('Welcome to Divine 3D Gallery! All downloads auto-secured.', 'success');
+        showToast('Divine 3D Gallery loaded! Showing all GLB models from GitHub.', 'success');
         
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast('Failed to initialize gallery', 'error');
+        showToast('Failed to load models from GitHub. Loading sample models...', 'error');
         loadSampleModels();
     } finally {
         showLoading(false);
@@ -379,23 +493,43 @@ async function init() {
 // DATA LOADING FUNCTIONS
 // ============================================
 
-async function loadModels() {
+async function loadAllModelsFromGitHub() {
     try {
         State.isLoading = true;
         updateLoadingIndicator(true);
         
-        // Try to load from GitHub
-        await importFromGitHub();
+        // Fetch all GLB files from GitHub
+        const models = await getAllGLBFilesFromGitHub();
+        
+        State.models = models;
         
         if (State.models.length === 0) {
-            loadSampleModels();
+            throw new Error('No GLB files found in repository');
         }
         
         updateCategories();
         saveToLocalStorage();
         filterAndSortModels();
         
-        console.log(`Loaded ${State.models.length} models`);
+        console.log(`Loaded ${State.models.length} GLB models from GitHub`);
+        showToast(`Successfully loaded ${State.models.length} sacred models`, 'success');
+        
+    } catch (error) {
+        console.error('Error loading models from GitHub:', error);
+        throw error;
+    } finally {
+        State.isLoading = false;
+        updateLoadingIndicator(false);
+    }
+}
+
+async function loadModels() {
+    try {
+        State.isLoading = true;
+        updateLoadingIndicator(true);
+        
+        // Try to load from GitHub
+        await loadAllModelsFromGitHub();
         
     } catch (error) {
         console.error('Error loading models:', error);
@@ -410,46 +544,15 @@ async function loadModels() {
     }
 }
 
+// Modified to use our new function
 async function importFromGitHub() {
     try {
-        const { repo, path, jsonUrl } = State.githubConfig;
+        const models = await getAllGLBFilesFromGitHub();
+        State.models = models;
         
-        if (!repo) {
-            throw new Error('GitHub repository not configured');
-        }
-        
-        let models = [];
-        
-        if (jsonUrl) {
-            models = await loadFromJsonUrl(jsonUrl);
-        } else {
-            models = await scanGitHubRepository(repo, path);
-        }
-        
-        const processedModels = await Promise.all(
-            models.map(async (model, index) => {
-                const processedModel = {
-                    id: model.id || `github_${Date.now()}_${index}`,
-                    name: model.name || extractNameFromUrl(model.glbUrl) || 'Unnamed Model',
-                    description: model.description || '',
-                    category: model.category || State.githubConfig.defaultCategory || 'Spiritual',
-                    tags: Array.isArray(model.tags) ? model.tags : [],
-                    glbUrl: model.glbUrl,
-                    thumbnailUrl: model.thumbnailUrl || getDefaultThumbnail(model.category),
-                    fileSize: model.fileSize || await getFileSize(model.glbUrl),
-                    createdAt: model.createdAt || new Date().toISOString(),
-                    updatedAt: model.updatedAt || new Date().toISOString(),
-                    downloads: model.downloadCount || model.downloads || 0,
-                    secure: await checkGLBSecurity(model.glbUrl),
-                    source: 'github',
-                    rating: model.rating || 0
-                };
-                
-                return processedModel;
-            })
-        );
-        
-        State.models = processedModels.filter(model => model.glbUrl);
+        updateCategories();
+        saveToLocalStorage();
+        filterAndSortModels();
         
         showToast(`Imported ${State.models.length} models from GitHub`, 'success');
         
@@ -459,96 +562,13 @@ async function importFromGitHub() {
     }
 }
 
-async function loadFromJsonUrl(jsonUrl) {
-    try {
-        const response = await fetch(jsonUrl, {
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (!Array.isArray(data)) {
-            throw new Error('Invalid JSON format: expected array');
-        }
-        
-        return data;
-    } catch (error) {
-        console.error('JSON load error:', error);
-        throw error;
-    }
-}
-
-async function scanGitHubRepository(repo, path) {
-    try {
-        const [owner, repoName] = repo.split('/');
-        
-        if (!owner || !repoName) {
-            throw new Error('Invalid repository format. Use: username/repository-name');
-        }
-        
-        const apiUrl = `${CONFIG.GITHUB_API.BASE_URL}/repos/${owner}/${repoName}/contents/${path}`;
-        const headers = {};
-        
-        if (CONFIG.GITHUB_API.TOKEN) {
-            headers.Authorization = `token ${CONFIG.GITHUB_API.TOKEN}`;
-        }
-        
-        const response = await fetch(apiUrl, { headers });
-        
-        if (!response.ok) {
-            throw new Error(`GitHub API error: ${response.status}`);
-        }
-        
-        const contents = await response.json();
-        
-        if (!Array.isArray(contents)) {
-            throw new Error('GitHub API returned invalid data');
-        }
-        
-        const glbFiles = contents.filter(item => 
-            item.type === 'file' && 
-            item.name.toLowerCase().endsWith('.glb')
-        );
-        
-        const models = glbFiles.map(file => {
-            const rawUrl = `${CONFIG.GITHUB_API.RAW_CONTENT_URL}/${repo}/main/${path}/${file.name}`;
-            
-            return {
-                id: `github_${file.sha}`,
-                name: extractNameFromFilename(file.name),
-                description: '',
-                category: State.githubConfig.defaultCategory || 'Spiritual',
-                tags: [],
-                glbUrl: rawUrl,
-                thumbnailUrl: 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
-                fileSize: formatFileSize(file.size),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                downloads: 0,
-                secure: false,
-                source: 'github'
-            };
-        });
-        
-        return models;
-        
-    } catch (error) {
-        console.error('GitHub scan error:', error);
-        throw error;
-    }
-}
+// Remove the old scanGitHubRepository function and use getAllGLBFilesFromGitHub instead
 
 async function checkGLBSecurity(url) {
     try {
         // Quick check for filename signature
-        if (!url.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE)) {
+        const filename = url.split('/').pop();
+        if (!filename.includes(CONFIG.GLB_SECURITY.FILENAME_SIGNATURE)) {
             return false;
         }
         
@@ -603,17 +623,6 @@ function extractNameFromUrl(url) {
     }
 }
 
-function getDefaultThumbnail(category) {
-    const thumbnails = {
-        'Spiritual': 'https://images.unsplash.com/photo-1600804340584-c7db2eacf0bf?w=400&h=300&fit=crop',
-        'Temple': 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
-        'Deity': 'https://images.unsplash.com/photo-1542640244-7e672d6cef4e?w=400&h=300&fit=crop',
-        'Symbol': 'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&h=300&fit=crop'
-    };
-    
-    return thumbnails[category] || thumbnails.Spiritual;
-}
-
 function loadSampleModels() {
     State.models = [
         {
@@ -623,41 +632,11 @@ function loadSampleModels() {
             category: 'Spiritual',
             tags: ['krishna', 'divine', 'statue', 'hindu'],
             glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: '',
+            thumbnailUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
             fileSize: '4.5 MB',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             downloads: 1250,
-            secure: true,
-            source: 'sample'
-        },
-        {
-            id: 'sample_2',
-            name: 'Meditation Buddha',
-            description: 'Peaceful Buddha statue in meditation pose',
-            category: 'Spiritual',
-            tags: ['buddha', 'meditation', 'peace', 'statue'],
-            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
-            fileSize: '3.2 MB',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            downloads: 980,
-            secure: true,
-            source: 'sample'
-        },
-        {
-            id: 'sample_3',
-            name: 'Ancient Temple',
-            description: 'Detailed 3D model of ancient Hindu temple',
-            category: 'Temple',
-            tags: ['temple', 'architecture', 'ancient', 'hindu'],
-            glbUrl: 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1586773860418-dc22f8b874bc?w=400&h=300&fit=crop',
-            fileSize: '6.8 MB',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            downloads: 750,
             secure: true,
             source: 'sample'
         }
@@ -1156,16 +1135,25 @@ function createModelCard(model, index) {
     card.className = 'model-card';
     card.style.animationDelay = `${index * 0.1}s`;
     
-    let thumbnailHTML = '';
-    if (model.thumbnailUrl) {
-        thumbnailHTML = `
-            <img src="${model.thumbnailUrl}" 
-                 alt="${model.name}" 
-                 loading="lazy"
-                 onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\"thumbnail-placeholder\">🎨</div>'">`;
-    } else {
-        thumbnailHTML = '<div class="thumbnail-placeholder">🎨</div>';
-    }
+    // Create model-viewer for GLB thumbnail
+    const thumbnailHTML = `
+        <model-viewer
+            src="${model.glbUrl}"
+            alt="${model.name}"
+            auto-rotate
+            camera-controls
+            camera-orbit="0deg 75deg 105%"
+            environment-image="neutral"
+            shadow-intensity="1"
+            exposure="1"
+            interaction-prompt="when-focused"
+            style="width: 100%; height: 100%; background: transparent;"
+        >
+            <div class="progress-bar" slot="progress-bar">
+                <div class="update-bar"></div>
+            </div>
+        </model-viewer>
+    `;
     
     card.innerHTML = `
         <div class="model-thumbnail">
@@ -1394,11 +1382,14 @@ function updateAdminModelList() {
         item.className = 'admin-model-item';
         item.innerHTML = `
             <div class="model-thumb-small">
-                ${model.thumbnailUrl 
-                    ? `<img src="${model.thumbnailUrl}" alt="${model.name}" loading="lazy"
-                         onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\"width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;\">🎨</div>'">`
-                    : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8b5cf6,#3b82f6);color:white;">🎨</div>'
-                }
+                <model-viewer
+                    src="${model.glbUrl}"
+                    alt="${model.name}"
+                    camera-controls
+                    camera-orbit="0deg 75deg 105%"
+                    style="width: 100%; height: 100%;"
+                >
+                </model-viewer>
             </div>
             <div class="model-info-small">
                 <h6>${model.name}</h6>
@@ -1513,7 +1504,7 @@ async function importModelsFromGitHub() {
         }
         
         updateAdminStatus('Import completed', 'success');
-        showToast(`Imported ${importedCount} models from Spiritual Server`, 'success');
+        showToast(`Imported ${importedCount} models from GitHub`, 'success');
         
         setTimeout(() => {
             if (Elements.importStatus) Elements.importStatus.style.display = 'none';
@@ -1733,6 +1724,38 @@ function generateQRCode() {
     }
 }
 
+function setupHeroPreview() {
+    if (Elements.heroPreview) {
+        // Set the model URL
+        Elements.heroPreview.src = 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb';
+        
+        // Add error handling
+        Elements.heroPreview.addEventListener('error', (e) => {
+            console.error('Hero preview error:', e);
+            // Fallback to showing a placeholder with icon
+            const heroVisual = document.querySelector('.hero-visual');
+            if (heroVisual) {
+                heroVisual.innerHTML = `
+                    <div class="floating-card">
+                        <div class="card-glow"></div>
+                        <div class="model-placeholder">
+                            <div class="placeholder-icon">🛕</div>
+                            <div class="placeholder-text">Divine 3D Gallery</div>
+                            <div class="placeholder-subtext">Loading sacred models...</div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        // Add success handler
+        Elements.heroPreview.addEventListener('load', () => {
+            console.log('Hero model loaded successfully');
+            Elements.heroPreview.style.opacity = '1';
+        });
+    }
+}
+
 // ============================================
 // EVENT LISTENERS SETUP
 // ============================================
@@ -1825,7 +1848,7 @@ function setupEventListeners() {
             Elements.refreshBtn.classList.add('loading');
             await loadModels();
             Elements.refreshBtn.classList.remove('loading');
-            showToast('Models refreshed!', 'success');
+            showToast('Models refreshed from GitHub!', 'success');
         };
     }
     
@@ -2048,11 +2071,6 @@ function setupEventListeners() {
         });
     }
     
-    // Initialize hero preview with first model
-    if (Elements.heroPreview && State.models.length > 0) {
-        Elements.heroPreview.src = State.models[0].glbUrl;
-    }
-    
     // Handle touch events for mobile
     document.addEventListener('touchstart', () => {}, { passive: true });
     
@@ -2080,82 +2098,6 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
-}
-// Add this function in the initialization section
-function setupHeroPreview() {
-    if (Elements.heroPreview) {
-        // Set the model URL
-        Elements.heroPreview.src = 'https://shank122004-tech.github.io/DivineAppWeb/models/hanuman_gada@divinemantra.glb';
-        
-        // Add error handling
-        Elements.heroPreview.addEventListener('error', (e) => {
-            console.error('Hero preview error:', e);
-            // Fallback to showing a placeholder with icon
-            const heroVisual = document.querySelector('.hero-visual');
-            if (heroVisual) {
-                heroVisual.innerHTML = `
-                    <div class="floating-card">
-                        <div class="card-glow"></div>
-                        <div class="model-placeholder">
-                            <div class="placeholder-icon">🛕</div>
-                            <div class="placeholder-text"></div>
-                            <div class="placeholder-subtext"></div>
-                        </div>
-                    </div>
-                `;
-            }
-        });
-        
-        // Add success handler
-        Elements.heroPreview.addEventListener('load', () => {
-            console.log('Hero model loaded successfully');
-            Elements.heroPreview.style.opacity = '1';
-        });
-    }
-}
-
-// Call this function in the init() function after DOM setup
-async function init() {
-    try {
-        showLoading(true);
-        
-        // Setup event listeners
-        setupEventListeners();
-        
-        // Load saved data
-        loadSavedData();
-        
-        // Setup hero preview
-        setupHeroPreview();
-        
-        // Load initial data
-        await loadModels();
-        
-        // Update UI
-        updateStats();
-        populateCategories();
-        renderModels();
-        
-        // Check admin status
-        checkAdminStatus();
-        
-        // Setup auto-refresh if enabled
-        setupAutoRefresh();
-        
-        // Setup FAB visibility
-        setupFABVisibility();
-        
-        State.isInitialized = true;
-        
-        showToast('Welcome to Divine 3D Gallery! All downloads auto-secured.', 'success');
-        
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showToast('Failed to initialize gallery', 'error');
-        loadSampleModels();
-    } finally {
-        showLoading(false);
-    }
 }
 
 // Expose key functions to global scope
